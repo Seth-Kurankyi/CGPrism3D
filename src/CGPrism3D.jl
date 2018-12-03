@@ -11,7 +11,7 @@ function numchop(num::Complex)
 end
 
 # Define k-level of SU(2)_k
-const K = 4 # K-level
+const K = 3 # K-level
 const x = K+1 #number of spins
 const y = K/2 # maximum spin
 
@@ -372,12 +372,25 @@ function tensorGlue(tensorB,tensorA,posnB,posnA)# glue two tensors TA,TB along p
     return indxsol, sol
 end
 
-export visqrt
+export visqrt, tensorGluePrism3D2
 function tensorGluePrism3D(tensorB,tensorA,posnB,posnA)
     indx, amps = tensorGlue(tensorB,tensorA,posnB,posnA)
     face = getindex.(indx, [posnB])
     ans = complex(zeros(length(face)))
     for i in 1:length(face)
+        ans[i] = prod(visqrt.(face[i]))
+    end
+    ampsN = @. amps / ans
+    ampsN = real(ampsN)+imag(ampsN)
+    return indx, ampsN
+end
+
+## This is to try to take care of bulk spins 
+function tensorGluePrism3D2(tensorB,tensorA,posnB,posnA)
+    indx, amps = tensorGlue(tensorB,tensorA,posnB,posnA)
+    face = getindex.(indx, [posnB])
+    ans = complex(ones(length(face)))
+    for i in 2:length(face)
         ans[i] = prod(visqrt.(face[i]))
     end
     ampsN = @. amps / ans
