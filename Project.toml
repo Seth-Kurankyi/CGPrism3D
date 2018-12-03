@@ -1,0 +1,8 @@
+name = "CGPrism3D"
+uuid = "0b374e8c-f0a8-11e8-0373-ad68d2fd2779"
+authors = ["Seth <seth.kurankyi@gmail.com>"]
+version = "0.1.0"
+
+[deps]
+LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
+Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
