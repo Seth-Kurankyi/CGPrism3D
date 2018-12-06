@@ -426,6 +426,49 @@ function tensorSum(ampJ,posnN)
     return indxeff, qq
 end
 
+function tensor22move(tensor,face)# place middle edge at last position 
+    # assert face contains 5 elements
+    indx = tensor[1] # spins of TB
+    amps = tensor[2]
+    flast = face[end]
+    ff1 = collect(1:length(indx[1]))
+    deleteat!(ff1,flast)
+    indxf1 = getindex.(indx, [ff1])
+    indxf1u = unique(indxf1)
+    indxlast = getindex.(indx, [flast])
+    for i in 1:4
+        if face[i]>flast
+            face[i] = face[i]-1
+        end
+    end
+    sol = []
+    findx = []
+    for i in 1:length(indxf1u)
+        j1 = indxf1u[i][face[1]]; j2 = indxf1u[i][face[2]]; j3 = indxf1u[i][face[3]]; j4 = indxf1u[i][face[4]]; 
+    #    #ans = 0#amps[i]
+    #    ind = zeros(length(indx[1]))
+        for j in 0.:0.5:y
+            if delta(j1,j3,j) != 0 && delta(j2,j4,j) != 0
+                fc = findall(x-> x == indxf1u[i],indxf1 )
+                ans = 0
+                for t in fc
+                    ju = indxlast[t]
+                    ans += numchop(amps[t] * Fsymb(j1,j3,j,j4,j2,ju)) #* ampls[t] 
+                end
+                push!(sol,ans)
+                #@assert length(j)==1
+                if length(indxf1u[i])== length(indx[1])
+                    deleteat!(indxf1u[i],flast)
+                end
+                push!(findx,insert!(indxf1u[i],flast,j))
+    #            end
+            end
+        end
+    #    #amps[i] = ans
+    #    #end
+    end
+    return findx,sol#indx,amps
+end
 
 
 end # module
