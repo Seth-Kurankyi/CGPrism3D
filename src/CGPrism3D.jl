@@ -11,7 +11,7 @@ function numchop(num::Complex)
 end
 
 # Define k-level of SU(2)_k
-const K = 3 # K-level
+const K = 4 # K-level
 const x = K+1 #number of spins
 const y = K/2 # maximum spin
 
@@ -273,7 +273,7 @@ function dataPrsmB2()
     return Indxspins, ampvals
 end
 
-export tensorSplitSVD, fullSplitPrism3D, tensorGlue, tensorSum, tensorGluePrism3D
+export tensorSplitSVD, fullSplitPrism3D, tensorGlue, tensorSum, tensorGluePrism3D, tensor22move
 # a general function to split a tensor M^C_{AB} to U^C_{Ai} and  V^C_{iB} with C the shared face.. for particular values of C
 # first reduce to matrix form and then perform svd to get U, s, and V
 #This returns the svd of tensorM,i.e., U^C_{Ai}, s_i, and V^C_{iB}. 
@@ -435,6 +435,7 @@ function tensor22move(tensor,face)# place middle edge at last position
     deleteat!(ff1,flast)
     indxf1 = getindex.(indx, [ff1])
     indxf1u = unique(indxf1)
+    #indxf1uMod = unique(indxf1)
     indxlast = getindex.(indx, [flast])
     for i in 1:4
         if face[i]>flast
@@ -444,28 +445,27 @@ function tensor22move(tensor,face)# place middle edge at last position
     sol = []
     findx = []
     for i in 1:length(indxf1u)
-        j1 = indxf1u[i][face[1]]; j2 = indxf1u[i][face[2]]; j3 = indxf1u[i][face[3]]; j4 = indxf1u[i][face[4]]; 
+        iMod = copy(indxf1u[i])
+        j1 = iMod[face[1]]; j2 = iMod[face[2]]; j3 = iMod[face[3]]; j4 = iMod[face[4]]; #j5 = ampsN[i][face[5]]
     #    #ans = 0#amps[i]
     #    ind = zeros(length(indx[1]))
         for j in 0.:0.5:y
+            #iMod = deepcopy(indxf1u)
             if delta(j1,j3,j) != 0 && delta(j2,j4,j) != 0
-                fc = findall(x-> x == indxf1u[i],indxf1 )
+                fc = findall(x-> x == iMod,indxf1 )
                 ans = 0
                 for t in fc
                     ju = indxlast[t]
                     ans += numchop(amps[t] * Fsymb(j1,j3,j,j4,j2,ju)) #* ampls[t] 
                 end
-                push!(sol,ans)
-                #@assert length(j)==1
-                if length(indxf1u[i])== length(indx[1])
-                    deleteat!(indxf1u[i],flast)
+                if numchop(ans) !=0
+                    push!(sol,ans)
+                    iMods = copy(indxf1u[i])
+                    push!(findx,insert!(iMods,flast,j))
                 end
-                push!(findx,insert!(indxf1u[i],flast,j))
     #            end
             end
         end
-    #    #amps[i] = ans
-    #    #end
     end
     return findx,sol#indx,amps
 end

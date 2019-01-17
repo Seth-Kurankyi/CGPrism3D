@@ -2,7 +2,7 @@ using CGPrism3D
 using Test
 using LinearAlgebra
 
-const K = 3
+const K = 4
 const x = K+1
 const y = K/2
 
@@ -18,7 +18,7 @@ const y = K/2
 #    end
 #end
 
-t6j =[]
+#t6j =[]
 #for ja in 0.:0.5:y, jb in 0.:0.5:y, jc in 0.:0.5:y, jd in 0.:0.5:y, je in 0.:0.5:y, jf in 0.:0.5:y
 #    if delta(ja,jb,jc) != 0 
 #        #dims = prod(visqrt.([ja,jb,jc,jd,je,jf]))
@@ -64,16 +64,23 @@ t6j =[]
 #@time @show length(tensorGlue(dataA,dataA,[2,3,5,8,9],[2,1,4,10,11])[1])
 
 #@time @show length(tensorGluePrism3D(uavb,ubva,[1,7,8,5,6],[2,6,5,7,8])[1])
-@time preff = tensorGlue(uavb,ubva,[5,7,9,10,12],[7,5,9,10,11])
-@time preff = tensorGluePrism3D(uavb,ubva,[5,7,9,10,12],[7,5,9,10,11])
-@time preff2 = tensorGluePrism3D2(uavb,ubva,[5,7,9,10,12],[7,5,9,10,11])
+#@time preff = tensorGlue(uavb,ubva,[5,7,9,10,12],[7,5,9,10,11])
+#@time preff = tensorGluePrism3D(uavb,ubva,[5,7,9,10,12],[7,5,9,10,11])
+#@time preff2 = tensorGluePrism3D2(uavb,ubva,[5,7,9,10,12],[7,5,9,10,11])
 #@time preffA = tensorGluePrism3D(dataA,dataA,[2,3,5,8,9],[2,1,4,10,11])
 #@show (length(preff[1]),length(preffA[1]) )
-@time @show  ( length(preff[1]), length(preff2[1]) )
-@time prsum = tensorSum(preff,[7])
-@time prsum2 = tensorSum(preff2,[7])
-@time @show  sum(numchop.( prsum[2] - prsum2[2] ))
+#@time @show  ( length(preff[1]), length(preff2[1]) )
+#@time prsum = tensorSum(preff,[7])
+#@time prsum2 = tensorSum(preff2,[7])
+#@time @show  sum(numchop.( prsum[2] - prsum2[2] ))
 #@time @show length(tensorSum(preffA,[5])[1]) 
+
+
+# Apply 2-2 move on faces of prisms
+# Inverse 2-2 move on 'bad' face
+@time yy = tensor22move(dataA,[1,2,11,10,4])
+@time yy2 = tensor22move(yy,[1,11,2,10,4])
+@show length(yy2[1])
 
 #@time prUAVB = generalGlue(dataA,dataA,[2,3,5,8,9],[1,2,4,10,11])
 #@time @show length(fullSplitPrism3D(dataA,[1,2,3],[7,8,9,10,11,12],[4,5,6])[1][2])
