@@ -11,7 +11,7 @@ function numchop(num::Complex)
 end
 
 # Define k-level of SU(2)_k
-const K = 3 # K-level
+const K = 4 # K-level
 const x = K+1 #number of spins
 const y = K/2 # maximum spin
 
