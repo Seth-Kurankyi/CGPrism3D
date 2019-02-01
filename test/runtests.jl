@@ -1,86 +1,96 @@
 using CGPrism3D
 using Test
 using LinearAlgebra
+#using StatsBase
 
-const K = 4
+const K = 3
 const x = K+1
 const y = K/2
 
 
+
+@time dataT = dataTet();
+@time dataF = dataFsymb();
 @time dataA = dataPrsmA();
-@time dataB = dataPrsmB();
-#@time dataB2 = dataPrsmB2();
-# Split the prism into tetrahedron and pyramid along the triangular face C = spins(jd1,jd2,je1) = (j4,j5,j6)
-#@time for ja in 0.:0.5:y, jb in 0.:0.5:y, jc in 0.:0.5:y
-#    sing = tensorSplitSVD(dataB,[1,2,3],[7,8,9,10,11,12],[4,5,6],[ja,jb,jc])[2]
-#    if sing[1] != 0
-#        println(sing[1:3])
-#    end
-#end
 
-#t6j =[]
-#for ja in 0.:0.5:y, jb in 0.:0.5:y, jc in 0.:0.5:y, jd in 0.:0.5:y, je in 0.:0.5:y, jf in 0.:0.5:y
-#    if delta(ja,jb,jc) != 0 
-#        #dims = prod(visqrt.([ja,jb,jc,jd,je,jf]))
-#        sol = numchop(Tetra6j(ja,jb,jc,jd,je,jf))
-#        if sol != 0
-#            push!(t6j,sol)
-#        end
-#    end
-#end
-#@show t6j
-#@show sortperm(dataB[1]) == 1:488
+# Testing Penstagon Identity -- related to 3-2 Pachner move
 
-@time tta = fullSplitPrism3D(dataA,[1,2,3],[7,8,9,10,11,12],[4,5,6]) # split into U, V
-@time ttb = fullSplitPrism3D(dataB,[1,2,3],[7,8,9,10,11,12],[4,5,6]) # split into U, V
-#@time ttb2 = fullSplitPrism3D(dataB2,[1,2,3],[7,8,9,10,11,12],[4,5,6]) # split into U, V
+@time f2 = tensorGlue(dataF,dataF,[2,4,6],[2,3,1])
+@time f3 = tensorGlue(f2,dataF,[5,8,7,3,4],[1,2,4,5,6])
+@time fs1 = tensorSum(f3,[4])
+@show sum(f2[2]-fs1[2])
 
-#@time tensorGlue(tta[2],ttb[1],[1,7,8],[5,3,2]) # glue along different faces to get prsmUAVB
-#@time tensorGlue(ttb[2],tta[1],[2,5,6],[4,2,1]) # glue along different faces to get prsmUBVA
+@time t2 = tensorGlueTet3D(dataT,dataT,[1,2,3],[1,2,3])
+@time t3 = tensorGlueTet3D(t2,dataT,[1,5,6,9,8],[1,2,3,5,6])
+@time ts1 = tensorSumTet3D(t3,[1])
+@show sum(t2[2]-ts1[2])
 
-@time uavb = tensorGluePrism3D(ttb[2],tta[1],[1,7,8],[5,3,2])
-@time ubva = tensorGluePrism3D(tta[2],ttb[1],[2,5,6],[4,2,1])
+# Tests on Prisms -- Full Algorithm 
+
+# Create a prism from three tetrahedra -- equivalent to dataA
+@time tet2 = tensorGlueTet3D(dataT,dataT,[1,2,3],[1,2,3])
+@time prA = tensorGlueTet3D(tet2,dataT,[2,7,9],[1,2,3])
+@show sum(prA[2]-dataA[2])
+
+## 2-2 move on faces [5,6,9,8,1] and [4,6,11,12,2] to switch diagonals -- gets prism B
+
+@time fa1 = tensor22move(prA,[5,6,8,9,1]) # face [i,l,j,k,n]
+@time prB = tensor22move(fa1,[4,6,12,11,2])
+@show sum(prB[2]-prA[2])
 
 
+# Split prisms into tetrahedra and pyramid 
 
-#@show sortperm(ttb[1][1])
-#@show sortperm(tta[1][1])
-#@show   tta[1][1] ==  ttb[1][1]
-#@show sort(tta[1][1])[15:20]  #sort(ttb[2][1])
-#@show (tta[1][2][sortperm(tta[1][1])][15:20], ttb[1][2][sortperm(ttb[1][1])][15:20] )
-#@show  numchop.( tta[1][2][sortperm(tta[1][1])] - ttb[1][2][sortperm(ttb[1][1])] )
+@time spltA = fullSplitTet3D(prA,[4,5,6],[7,8,9,10,11,12],[1,2,3]) # split into U, V
+ua, va = spltA[1], spltA[2]
 
-#@time uv = tensorGluePrism3D(ttb[2],ttb[1],[1,2,3],[4,5,6])
-#@show length(uv[2])
+@time spltB = fullSplitTet3D(prB,[6,9,11],[3,4,5,7,8,12],[10,2,1]) # split into U, V
+ub, vb = spltB[1], spltB[2]
+
+@show (sum(ub[2]-dataT[2]),sum(vb[2]-tet2[2]))
+@show (sum(ua[2]-dataT[2]),sum(va[2]-tet2[2]))
+
+# Glue tetrahedra and pyramids back into effective prism
+
+@time uavb = tensorGlueTet3D(ua,vb,[1,3,5],[2,6,8])
+@time ubva = tensorGlueTet3D(ub,va,[1,3,5],[6,5,8])
+@show (sum(uavb[2]-prA[2]),sum(ubva[2]-prA[2]))
+
+@time pruv = tensorGlueTet3D(uavb,ubva,[1,2,6,7,8],[3,2,4,10,9]) # get effective prism
+@time pruvAB = tensorSumTet3D(pruv,[1])# sum over bulk index 
+
+# Coarse graining procedures 
+# 2-2 move /F-move on faces 0,1,2
+
+@time Face0 = tensor22move(pruvAB,[12,15,8,9,6])
+@time Face1 = tensor22move(pruvAB,[14,12,3,2,1])
+@time Face2 = tensor22move(pruvAB,[17,16,11,9,7])
+@show (length(Face0[2]),length(Face1[2]),length(Face2[2]))
+
+# It doesn't matter the order of moves 
+@time Face01 = tensor22move(Face0,[14,12,3,2,1])
+@time Face10 = tensor22move(Face1,[12,15,8,9,6])
+@time Face02 = tensor22move(Face0,[17,16,11,9,7])
+@time Face20 = tensor22move(Face2,[12,15,8,9,6])
+@time Face12 = tensor22move(Face1,[17,16,11,9,7])
+@time Face21 = tensor22move(Face2,[14,12,3,2,1])
+@show (length(Face01[2]),length(Face10[2]),length(Face02[2]),length(Face20[2]),length(Face12[2]),length(Face21[2]))
+
+@time Face012 = tensor22move(Face01,[17,16,11,9,7])
+@time Face102 = tensor22move(Face10,[17,16,11,9,7])
+@show (length(Face012[2]),length(Face102[2]))
+
+# Final Pachner moves-- 3-1 pachner moves using SVD 
+
+@time CGtet1 = fullSplitTet3D(Face012,[8,12,2],[3,4,5,7,9,11,13,14,15,16,17,18],[1,6,10])
+@time CGtet2 = fullSplitTet3D(Face012,[15,16,9],[1,2,3,4,5,8,10,11,12,13,14,17],[7,6,18])
+@show (length(CGtet1[1][1]),length(CGtet1[2][1]),length(CGtet2[1][1]),length(CGtet2[2][1]))
 
 
-#@show numchop.(sort(uv[2]) - sort(dataA[2]))
-
-
-#@time uv = tensorGlue(ttb[2],tta[1],[1,2,3],[4,5,6])
-@show (length(uavb[2]),length(ubva[2]) )
-
-#@time @show length(tensorGlue(uavb,ubva,[5,7,9,10,12],[7,5,9,10,11])[1]) # full effective prism including bulk variable
-#@time @show length(tensorGlue(dataA,dataA,[2,3,5,8,9],[2,1,4,10,11])[1])
-
-#@time @show length(tensorGluePrism3D(uavb,ubva,[1,7,8,5,6],[2,6,5,7,8])[1])
-#@time preff = tensorGlue(uavb,ubva,[5,7,9,10,12],[7,5,9,10,11])
-#@time preff = tensorGluePrism3D(uavb,ubva,[5,7,9,10,12],[7,5,9,10,11])
-#@time preff2 = tensorGluePrism3D2(uavb,ubva,[5,7,9,10,12],[7,5,9,10,11])
-#@time preffA = tensorGluePrism3D(dataA,dataA,[2,3,5,8,9],[2,1,4,10,11])
-#@show (length(preff[1]),length(preffA[1]) )
-#@time @show  ( length(preff[1]), length(preff2[1]) )
-#@time prsum = tensorSum(preff,[7])
-#@time prsum2 = tensorSum(preff2,[7])
-#@time @show  sum(numchop.( prsum[2] - prsum2[2] ))
-#@time @show length(tensorSum(preffA,[5])[1]) 
-
-
-# Apply 2-2 move on faces of prisms
-# Inverse 2-2 move on 'bad' face
-@time yy = tensor22move(dataA,[1,2,11,10,4])
-@time yy2 = tensor22move(yy,[1,11,2,10,4])
-@show length(yy2[1])
-
-#@time prUAVB = generalGlue(dataA,dataA,[2,3,5,8,9],[1,2,4,10,11])
-#@time @show length(fullSplitPrism3D(dataA,[1,2,3],[7,8,9,10,11,12],[4,5,6])[1][2])
+@time CGtetfull1 = fullSplitTet3D(CGtet2[2],[6,2,9],[3,4,5,8,10,11,12,13,15],[1,14,7])
+@time CGtetfull2 = fullSplitTet3D(CGtet1[2],[9,10,5],[1,2,3,6,7,8,11,13,15],[4,14,12])
+@show (length(CGtetfull1[2][1]),length(CGtetfull1[2][2]),length(CGtetfull2[2][1]),length(CGtetfull2[2][2]) )
+@show fans = sum( CGtetfull2[2][2] - dataA[2])
+if numchop(fans) == 0
+    println("SUCCESS -- :)")
+end

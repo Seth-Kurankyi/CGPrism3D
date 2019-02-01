@@ -1,6 +1,6 @@
 module CGPrism3D
 using LinearAlgebra
-
+#using StatsBase
 
 # Define chop function 
 export numchop
@@ -11,7 +11,7 @@ function numchop(num::Complex)
 end
 
 # Define k-level of SU(2)_k
-const K = 4 # K-level
+const K = 3 # K-level
 const x = K+1 #number of spins
 const y = K/2 # maximum spin
 
@@ -146,9 +146,60 @@ end
 
 
 
-export dataPrsmA, dataPrsmB, dataPrsmB2
+export dataTet, dataFsymb, dataPrsmA
 
 # get all non-zero amplitudes and spins 
+
+# get all non-zero tetrahedron amplitude and spins (also for F-symbol) 
+
+function dataTet()
+    t6j = []
+    t6s = []
+    for ja in 0.:0.5:y, jb in 0.:0.5:y, jc in 0.:0.5:y
+        if delta(ja,jb,jc) != 0
+            for jd in 0.:0.5:y, je in 0.:0.5:y
+                if delta(jc,jd,je) != 0
+                    for jf in 0.:0.5:y
+                        if delta(ja,je,jf) != 0 && delta(jb,jd,jf) != 0
+            #dims = prod(visqrt.([ja,jb,jc,jd,je,jf]))
+                            sol = numchop(Tetra6j(ja,jb,jc,jd,je,jf) )
+                            if sol != 0
+                                push!(t6s,sol)
+                                push!(t6j,[ja,jb,jc,jd,je,jf])
+                            end
+                        end
+                    end
+                end
+            end
+        end
+    end
+    return t6j,t6s
+end
+
+function dataFsymb()
+    t6j = []
+    t6s = []
+    for ja in 0.:0.5:y, jb in 0.:0.5:y, jc in 0.:0.5:y
+        if delta(ja,jb,jc) != 0
+            for jd in 0.:0.5:y, je in 0.:0.5:y
+                if delta(jc,jd,je) != 0
+                    for jf in 0.:0.5:y
+                        if delta(ja,je,jf) != 0 && delta(jb,jd,jf) != 0
+            #dims = prod(visqrt.([ja,jb,jc,jd,je,jf]))
+                            sol = numchop(Fsymb(ja,jb,jc,jd,je,jf) )
+                            if sol != 0
+                                push!(t6s,sol)
+                                push!(t6j,[ja,jb,jc,jd,je,jf])
+                            end
+                        end
+                    end
+                end
+            end
+        end
+    end
+    return t6j,t6s
+end
+
 function dataPrsmA()
     ampsInfo = Array{Float64,1}[]
     amps = Float64[]
@@ -189,136 +240,66 @@ function dataPrsmA()
     return ampsInfo, amps
 end
 
+# Operation on tensors
+# 1. Gluing tensors, 2. Splitting tensors, 3. Summing over tensor indices 
 
-function dataPrsmB()
-    ampsInfo = Array{Float64,1}[]
-    amps = Float64[]
-    for jd2 in 0.:0.5:y, jd1 in 0.:0.5:y, je2 in 0.:0.5:y
-        if delta(jd1,jd2,je2) != 0 
-            for jb2 in 0.:0.5:y, jg in 0.:0.5:y
-                if delta(jd2,jb2,jg) != 0 
-                    for ja2 in 0.:0.5:y
-                        if delta(ja2,jd1,jg) != 0 && delta(ja2,jb2,je2) != 0
-                            for jc in 0.:0.5:y, jb1 in 0.:0.5:y
-                                if delta(jd2,jc,jb1) != 0
-                                    for jf2 in 0.:0.5:y
-                                        if delta(jf2,jd1,jb1) != 0 && delta(jf2,jc,je2) != 0
-                                            for ja1 in 0.:0.5:y, jf1 in 0.:0.5:y
-                                                if delta(jd2,ja1,jf1) != 0
-                                                    for je1 in 0.:0.5:y
-                                                        if delta(jc,je1,jf1) != 0 && delta(jb1,je1,ja1) != 0 #
-                                                            sol = numchop(prismB(jd2,jd1,je2,jb2,jg,ja2,jc,jb1,jf2,ja1,jf1,je1))
-                                                            if sol != 0
-                                                                indx = [jb2,jg,ja2,jd2,jd1,je2,jc,jb1,jf2,ja1,jf1,je1]
-                                                                push!(ampsInfo,indx)
-                                                                push!(amps,sol)
-                                                            end
-                                                        end
-                                                    end
-                                                end
-                                            end
-                                        end
-                                    end
-                                end
-                            end
-                        end
-                    end
-                end
-            end
-        end
-    end
-    return ampsInfo, amps
-end
+export tensorBlock, fullSplitTet3D, fullSplit3D, tensorGlue, tensorSum, tensorGlueTet3D, tensor22move, tensorSumTet3D
 
-
-function dataPrsmB2()
-    ampsInfo = Array{Float64,1}[]
-    amps = Float64[]
-    for jd2 in 0.:0.5:y, jd1 in 0.:0.5:y, je2 in 0.:0.5:y
-        if delta(jd2,jd1,je2) != 0 
-            for jb2 in 0.:0.5:y, jg in 0.:0.5:y
-                if delta(jd2,jb2,jg) != 0 
-                    for ja2 in 0.:0.5:y
-                        if delta(ja2,jd1,jg) != 0 && delta(ja2,jb2,je2) != 0
-                            for jc in 0.:0.5:y, jb1 in 0.:0.5:y
-                                if delta(jd2,jc,jb1) != 0
-                                    for jf2 in 0.:0.5:y
-                                        if delta(jf2,jd1,jb1) != 0 && delta(jf2,jc,je2) != 0
-                                            for ja1 in 0.:0.5:y, jf1 in 0.:0.5:y
-                                                if delta(jd2,ja1,jf1) != 0
-                                                    for je1 in 0.:0.5:y
-                                                        if delta(jc,je1,jf1) != 0 && delta(jb1,je1,ja1) != 0 #
-                                                            sol = numchop(prismB2(jd2,jd1,je2,jb2,jg,ja2,jc,jb1,jf2,ja1,jf1,je1))
-                                                            if sol != 0
-                                                                indx = [jb2,jg,ja2,jd2,jd1,je2,jc,jb1,jf2,ja1,jf1,je1]
-                                                                push!(ampsInfo,indx)
-                                                                push!(amps,sol)
-                                                            end
-                                                        end
-                                                    end
-                                                end
-                                            end
-                                        end
-                                    end
-                                end
-                            end
-                        end
-                    end
-                end
-            end
-        end
-    end
-    Indxspins = sort(ampsInfo)
-    ampvals = amps[sortperm(ampsInfo)]
-    return Indxspins, ampvals
-end
-
-export tensorSplitSVD, fullSplitPrism3D, tensorGlue, tensorSum, tensorGluePrism3D, tensor22move
 # a general function to split a tensor M^C_{AB} to U^C_{Ai} and  V^C_{iB} with C the shared face.. for particular values of C
 # first reduce to matrix form and then perform svd to get U, s, and V
-#This returns the svd of tensorM,i.e., U^C_{Ai}, s_i, and V^C_{iB}. 
-function tensorSplitSVD(tensorM,posnA,posnB,posnC,spinC)
+
+#This reduces the tensor M into matrix form M^C_{AB} with AB labelling matric indices. 
+function tensorBlock(tensorM,posnA,posnB,posnC,spinC)
     indx = tensorM[1]
     ampvals = tensorM[2]
     fc = findall(x-> x[posnC] == spinC, indx) #find spinsC in all spins length(posnC) = length(spinC)
     ampInfo = indx[fc] # this contains all spin configuration containing ampsC
     amps = ampvals[fc] # this contains the corresponding spin amplitude values for ampsC
-    Ucol = unique(getindex.(ampInfo, [posnA]))
-    Vrow = unique(getindex.(ampInfo, [posnB]))
-    matM = zeros(length(Ucol),length(Vrow))
+    Acol = unique(getindex.(ampInfo, [posnA]))
+    Brow = unique(getindex.(ampInfo, [posnB]))
+    indxU = vcat.(Acol,repeat([spinC],length(Acol)))
+    indxV = vcat.(Brow,repeat([spinC],length(Brow)))
+    matM = zeros(length(Acol),length(Brow))
     if length(matM) != 0
         for i in 1:length(ampInfo)
-            qu = findall(x-> x == ampInfo[i][posnA], Ucol)[1]# [1] since it returns an array [1]
-            qv = findall(x-> x == ampInfo[i][posnB], Vrow)[1]
+            qu = findall(x-> x == ampInfo[i][posnA], Acol)[1]# [1] since it returns an array [1]
+            qv = findall(x-> x == ampInfo[i][posnB], Brow)[1]
             matM[qu,qv] = amps[i]
         end
-        U, s, V = svd(matM)
-        return U,s,V
+        #U, s, V = svd(matM)
+        return matM,indxU,indxV
     else
         return 0,0,0
     end
 end
 
 #A general function to splits fully the tensor M^C_{AB} to tensors U^C_{Ai} and V^C_{iB}. 
-# It uses tensorSplitSVD,'fixes' the sign problem from svd, and normalize 
-#This is designed specifically for the prisms we are working with. It keeps only the first singular value (assuming a gemetric split)
+# It uses tensorBlock, 'fixes' the sign problem from svd, and normalize 
+# We keep only the first singular value (assuming a gemetric split)
 # splits prism into tetrahedron and a  pyramid
-function fullSplitPrism3D(dataM,posnA,posnB,posnC) # posnA,B,C must be vectors @assert length(dataM) = vcat(A,B,C)
+# Multiply back by missing dimension factors 
+function fullSplitTet3D(dataM,posnA,posnB,posnC) # posnA,B,C must be vectors @assert length(dataM) = vcat(A,B,C)
     indx = dataM[1] 
     ampvals = dataM[2]
-    posAC = vcat(posnA,posnC) # assert posnA,posnC must be both vectors
-    posCB = vcat(posnC,posnB) # assert posnB,posnC must be both vectors
-    indxU = unique(getindex.(indx, [posAC]))
-    indxV = unique(getindex.(indx, [posCB]))
+    #posAC = vcat(posnA,posnC) # assert posnA,posnC must be both vectors
+    #posBC = vcat(posnB,posnC) # assert posnB,posnC must be both vectors
+    #indxU = unique(getindex.(indx, [posAC]))
+    #indxV = unique(getindex.(indx, [posBC]))
     ampsC = unique(getindex.(indx, [posnC])) # get all unique spins C (jd1,jd2,je1) 
     ampsU = [] # this will store all amplitudes for U^C_{A}
     ampsV = [] # this will store all amplitudes for V^C_{B}
+    indxsU = []
+    indxsV = []
     #indxUV = [] # if we want this will store all spins in the right order
     for i in 1:length(ampsC) # loop over the unique spins
         jd1 = ampsC[i][1]; jd2 = ampsC[i][2]; je1 = ampsC[i][3]  #jd1,jd2,je1 in spin C form a triangle
         if delta(jd1,jd2,je1) != 0
             spinC = [jd1,jd2,je1]
-            U, s, V = tensorSplitSVD(dataM,posnA,posnB,posnC,spinC)
+            block = tensorBlock(dataM,posnA,posnB,posnC,spinC)
+            mat = block[1]
+            blkU = block[2]
+            blkV = block[3]
+            U, s, V = svd(mat)
             #truncate and use only first singular value
             U1 = U[:,1] 
             V1 = V[:,1]
@@ -328,14 +309,18 @@ function fullSplitPrism3D(dataM,posnA,posnB,posnC) # posnA,B,C must be vectors @
             # valU,valV are all either real or purely imaginary
             valU = real(valU) - imag(valU) # take -ve of imaginary part if it gives only imag
             valV = real(valV) + imag(valV)
-            ja1 = indxU[1][1]; jb1 = indxU[1][2]; jg = indxU[1][3] # pick the first spins in U
+            ja1 = blkU[1][1]; jb1 = blkU[1][2]; jg = blkU[1][3] # pick the first spins in U
             #Fixing sign problem -- keep the same sign for U and Tetra6j symbol 
-            if sign(valU[1]) == sign(Tetra6j(jd1,jd2,je1,jb1,jg,ja1) )
+            if sign(valU[1]) == sign(Tetra6j(jd1,jd2,je1,ja1,jb1,jg) )
                 push!(ampsU, valU)#/valU[1])
                 push!(ampsV, valV)#/valV[1])
+                push!(indxsU,blkU)
+                push!(indxsV,blkV)
             else
                 push!(ampsU, -valU)#/valU[1])
                 push!(ampsV, -valV)#/valV[1])
+                push!(indxsU,blkU)
+                push!(indxsV,blkV)
             end    
         end
     end
@@ -343,40 +328,141 @@ function fullSplitPrism3D(dataM,posnA,posnB,posnC) # posnA,B,C must be vectors @
     solV = collect(Iterators.flatten(ampsV))
     ansU = solU/solU[1] # normalization condition
     ansV = solV/solV[1]
-    return (indxU,ansU),(indxV,ansV) #,indxUV
+    indxUs = collect(Iterators.flatten(indxsU))
+    indxVs = collect(Iterators.flatten(indxsV))
+    return (indxUs,ansU),(indxVs,ansV) #,indxUV
 end
 
-#its better if TA the 'smallest' tensor, posnA and posnB should be of the same length
+# This doesn't take care of dimension factors
+function fullSplit3D(dataM,posnA,posnB,posnC) # posnA,B,C must be vectors @assert length(dataM) = vcat(A,B,C)
+    indx = dataM[1] 
+    ampvals = dataM[2]
+    #posAC = vcat(posnA,posnC) # assert posnA,posnC must be both vectors
+    #posBC = vcat(posnB,posnC) # assert posnB,posnC must be both vectors
+    #indxU = unique(getindex.(indx, [posAC]))
+    #indxV = unique(getindex.(indx, [posBC]))
+    ampsC = unique(getindex.(indx, [posnC])) # get all unique spins C (jd1,jd2,je1) 
+    ampsU = [] # this will store all amplitudes for U^C_{A}
+    ampsV = [] # this will store all amplitudes for V^C_{B}
+    indxsU = []
+    indxsV = []
+    #indxUV = [] # if we want this will store all spins in the right order
+    for i in 1:length(ampsC) # loop over the unique spins
+        jd1 = ampsC[i][1]; jd2 = ampsC[i][2]; je1 = ampsC[i][3]  #jd1,jd2,je1 in spin C form a triangle
+        if delta(jd1,jd2,je1) != 0
+            spinC = [jd1,jd2,je1]
+            block = tensorBlock(dataM,posnA,posnB,posnC,spinC)
+            mat = block[1]
+            blkU = block[2]
+            blkV = block[3]
+            U, s, V = svd(mat)
+            #truncate and use only first singular value
+            U1 = U[:,1] 
+            V1 = V[:,1]
+            s1 = s[1]
+            valU = U1*sqrt(s1)#*sqrt(prod(visqrt.(ampsC[i]))) # multiply by leftover dimension factors
+            valV = V1*sqrt(s1)#*sqrt(prod(visqrt.(ampsC[i])))
+            # valU,valV are all either real or purely imaginary
+            valU = real(valU) - imag(valU) # take -ve of imaginary part if it gives only imag
+            valV = real(valV) + imag(valV)
+            ja1 = blkU[1][1]; jb1 = blkU[1][2]; jg = blkU[1][3] # pick the first spins in U
+            #Fixing sign problem -- keep the same sign for U and Tetra6j symbol 
+            if sign(valU[1]) == sign(Tetra6j(jd1,jd2,je1,ja1,jb1,jg) )
+                push!(ampsU, valU)#/valU[1])
+                push!(ampsV, valV)#/valV[1])
+                push!(indxsU,blkU)
+                push!(indxsV,blkV)
+            else
+                push!(ampsU, -valU)#/valU[1])
+                push!(ampsV, -valV)#/valV[1])
+                push!(indxsU,blkU)
+                push!(indxsV,blkV)
+            end    
+        end
+    end
+    solU = collect(Iterators.flatten(ampsU))
+    solV = collect(Iterators.flatten(ampsV))
+    ansU = solU/solU[1] # normalization condition
+    ansV = solV/solV[1]
+    indxUs = collect(Iterators.flatten(indxsU))
+    indxVs = collect(Iterators.flatten(indxsV))
+    return (indxUs,ansU),(indxVs,ansV) #,indxUV
+end
+
+## Glue any two tensors A, B along shared faces .. 
 function tensorGlue(tensorB,tensorA,posnB,posnA)# glue two tensors TA,TB along posnA from TA and posnB from TB 
     indxA = tensorA[1] # spins of TA
     indxB = tensorB[1] # spins of TB
     ampsA = tensorA[2] # amplitudes of TA
     ampsB = tensorB[2] # amplitudes of TB
+    shrdA = getindex.(indxA,[posnA])
+    shrdB = getindex.(indxB,[posnB])
     lena = collect(1:length(indxA[1]))
     deleteat!(lena,sort(posnA)) # assert needs posnA to be a vector
     #if length(posnA) > 1 deleteat!(lena,sort(posnA,dims=2) else  deleteat!(lena,sort(posnA)) end
-    amps = []
+    shrdAB = []
     qq = []
-    for i in 1:length(indxA)
-        fc = findall(x-> x[posnB] == indxA[i][posnA], indxB) # needs length(posnA) = length(posnB)
-        ans = @. ampsA[i]*ampsB[fc]
-        push!(amps,ans)
-        indxa = repeat([indxA[i][lena]],length(indxB[fc])) 
-        #for j in indxA[i][lena]
-        indxa1 = vcat.(indxB[fc],indxa)
-        push!(qq,indxa1)
-        #push!(qq,[collect(Iterators.flatten([indxB[fc][j],indxA[i][lena]])) for j in 1:length(indxB[fc])])
+    amps = []
+    sa = sortperm(shrdA)
+    sb = sortperm(shrdB)
+    shrdA = shrdA[sa]
+    shrdB = shrdB[sb]
+    sindxA = indxA[sa]
+    sindxB = indxB[sb]
+    sampsA = ampsA[sa]
+    sampsB = ampsB[sb]
+    shrdAu = unique(shrdA)
+    shrdBu = unique(shrdB)
+    shrd = shrdAu
+    if shrdAu == shrdBu
+        shrd = shrdAu
+    else
+        for i in shrdBu
+            shrd = shrdAu
+            if !(i in shrdAu)
+                push!(shrd,i)
+            end
+        end
     end
-    sol = collect(Iterators.flatten(amps))
+    #cshrdA = countmap(shrdA)
+    #cshrdB = countmap(shrdB)
+    for i in shrd
+        ca = count(x->x==i,shrdA)
+        cb = count(x->x==i,shrdB)
+        push!(shrdAB, (i, ca,cb ))
+    end
+    cnt = 1
+    cntb = 1
+    for i in shrdAB
+        if i[2] == 0 || i[3] == 0 # Put condition for when one of a or b is zero
+            nothing
+        else
+            for j in 1:i[2]
+                ans = @. sampsA[j]*sampsB[1:i[3]]
+                push!(amps,ans)
+                indxa = repeat([sindxA[j][lena]],i[3]) 
+                #for j in indxA[i][lena]
+                indxa1 = vcat.(sindxB[1:i[3]],indxa)
+                push!(qq,indxa1)
+            end
+        end
+        deleteat!(sindxA,1:i[2])
+        deleteat!(sindxB,1:i[3])
+        deleteat!(sampsA,1:i[2])
+        deleteat!(sampsB,1:i[3])
+        #cntb = cnt
+    end
     indxsol = collect(Iterators.flatten(qq))
-    return indxsol, sol
+    sol = collect(Iterators.flatten(amps))
+    return indxsol,sol
 end
 
-export visqrt, tensorGluePrism3D2
-function tensorGluePrism3D(tensorB,tensorA,posnB,posnA)
+
+#Take care of dimesion factors after gluing 
+function tensorGlueTet3D(tensorB,tensorA,posnB,posnA)
     indx, amps = tensorGlue(tensorB,tensorA,posnB,posnA)
     face = getindex.(indx, [posnB])
-    ans = complex(zeros(length(face)))
+    ans = complex(ones(length(face)))
     for i in 1:length(face)
         ans[i] = prod(visqrt.(face[i]))
     end
@@ -385,19 +471,7 @@ function tensorGluePrism3D(tensorB,tensorA,posnB,posnA)
     return indx, ampsN
 end
 
-## This is to try to take care of bulk spins 
-function tensorGluePrism3D2(tensorB,tensorA,posnB,posnA)
-    indx, amps = tensorGlue(tensorB,tensorA,posnB,posnA)
-    face = getindex.(indx, [posnB])
-    ans = complex(ones(length(face)))
-    for i in 2:length(face)
-        ans[i] = prod(visqrt.(face[i]))
-    end
-    ampsN = @. amps / ans
-    ampsN = real(ampsN)+imag(ampsN)
-    return indx, ampsN
-end
-
+# Summing a tensor  over indices labelled posnN
 function tensorSum(ampJ,posnN)
     indx = ampJ[1]
     amps = ampJ[2]
@@ -405,70 +479,96 @@ function tensorSum(ampJ,posnN)
     deleteat!(lenS,sort(posnN))
     #if length(posnN) > 1   deleteat!(lenS,sort(posnN,dims=2)) else  deleteat!(lenS,sort(posnN)) end
     indxef = getindex.(indx,[lenS]) # get all spins without N 
+    #indxefu = unique(indxef)
     tt = sortperm(indxef) # sort them spins 
     indxef = indxef[tt] # apply sort on spins 
     amps = amps[tt]  # apply sort on amps
     #fc = findall(x-> x[lenS]==ans ,indx)
     qq = []
-    if indxef[2] == indxef[1]
-        amps[2] += amps[1]
-    else
-        push!(qq,amps[1])
-    end
-    for i in 2:length(indxef)
-        if indxef[i] == indxef[i-1]
-            amps[i] += amps[i-1]
-        else
-            push!(qq,amps[i])
+    indq = []
+    fc = sortperm(indxef)
+    indxN = indxef[fc]
+    ampsN = amps[fc]
+    
+    for i in 2:length(indxN)
+        if indxN[i] == indxN[i-1]
+            ampsN[i] += ampsN[i-1]
+        elseif numchop(ampsN[i-1]) != 0
+            push!(indq,indxN[i-1])
+            push!(qq,ampsN[i-1])
         end
     end
-    indxeff = unique(indxef)
-    return indxeff, qq
+    push!(indq,indxN[end])
+    push!(qq,ampsN[end])
+    return indq, qq
 end
 
+# Take care of dimension factors when summing. This makes sure Pachner 3-2 move works 
+# For now this only works for summing over one index-- we can change this easily
+function tensorSumTet3D(tensor,posnN)
+    indx = tensor[1]
+    amps = tensor[2]
+    blkdims = getindex.(indx,posnN)
+    ampsN = amps .*visqrt.(blkdims)
+    ampsN2 = real(ampsN) - imag(ampsN)
+    data = indx, ampsN2
+    ans = tensorSum(data,posnN)
+    return ans
+end
+
+# Performs an F-move on a face.. equivalent to 2-2 Pachner move -- this uses Fsymbol
 function tensor22move(tensor,face)# place middle edge at last position 
     # assert face contains 5 elements
     indx = tensor[1] # spins of TB
     amps = tensor[2]
     flast = face[end]
-    ff1 = collect(1:length(indx[1]))
-    deleteat!(ff1,flast)
-    indxf1 = getindex.(indx, [ff1])
-    indxf1u = unique(indxf1)
-    #indxf1uMod = unique(indxf1)
     indxlast = getindex.(indx, [flast])
-    for i in 1:4
-        if face[i]>flast
-            face[i] = face[i]-1
-        end
-    end
-    sol = []
+    #for i in 1:4
+    #    if face[i]>flast
+    #        face[i] = face[i]-1
+    #    end
+    #end
+    famps = []
     findx = []
-    for i in 1:length(indxf1u)
-        iMod = copy(indxf1u[i])
-        j1 = iMod[face[1]]; j2 = iMod[face[2]]; j3 = iMod[face[3]]; j4 = iMod[face[4]]; #j5 = ampsN[i][face[5]]
+    for i in 1:length(indx)
+        #iMod = copy(indx[i])
+        j1 = indx[i][face[1]]; j2 = indx[i][face[2]]; j3 = indx[i][face[3]]; j4 = indx[i][face[4]]; j5 = indx[i][face[5]]
     #    #ans = 0#amps[i]
     #    ind = zeros(length(indx[1]))
         for j in 0.:0.5:y
             #iMod = deepcopy(indxf1u)
-            if delta(j1,j3,j) != 0 && delta(j2,j4,j) != 0
-                fc = findall(x-> x == iMod,indxf1 )
-                ans = 0
-                for t in fc
-                    ju = indxlast[t]
-                    ans += numchop(amps[t] * Fsymb(j1,j3,j,j4,j2,ju)) #* ampls[t] 
-                end
-                if numchop(ans) !=0
-                    push!(sol,ans)
-                    iMods = copy(indxf1u[i])
-                    push!(findx,insert!(iMods,flast,j))
-                end
-    #            end
+            if delta(j1,j3,j) != 0 && delta(j2,j4,j) != 0 && Fsymb(j1,j3,j,j4,j2,j5) != 0
+                iMod = copy(indx[i])
+                ampsA = numchop(amps[i] * Fsymb(j1,j3,j,j4,j2,j5))
+                push!(famps,ampsA)
+                push!(findx,insert!(deleteat!(iMod,flast),flast,j))
+                #fc = findall(x-> x == iMod,indxf1 )
             end
         end
     end
-    return findx,sol#indx,amps
+    #indxf1 = getindex.(indx, [ff1]) # get all spins without spin N to be summed over 
+    tt = sortperm(findx) # sort them spins 
+    indxf1 = findx[tt] # apply sort on spins 
+    famps = famps[tt]  # apply sort on amps
+    #fc = findall(x-> x[lenS]==ans ,indx)
+    qq = []
+    indxeff = []
+    for i in 2:length(indxf1)
+        if indxf1[i] == indxf1[i-1]
+            famps[i] += famps[i-1]
+        elseif numchop(famps[i-1]) != 0
+            push!(indxeff,indxf1[i-1])
+            push!(qq,famps[i-1])
+        end
+    end
+    push!(indxeff,indxf1[end])
+    push!(qq,famps[end])
+    #indxeff = unique(indxf1)
+    return indxeff, qq
 end
+
+
+# For 3-1 move, we will use SVD -- i.e. use the function fullSplitTet3D or fullSplit3D
 
 
 end # module
