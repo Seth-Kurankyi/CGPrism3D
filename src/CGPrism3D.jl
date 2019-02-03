@@ -262,8 +262,8 @@ function tensorBlock(tensorM,posnA,posnB,posnC,spinC)
     matM = zeros(length(Acol),length(Brow))
     if length(matM) != 0
         for i in 1:length(ampInfo)
-            qu = findall(x-> x == ampInfo[i][posnA], Acol)[1]# [1] since it returns an array [1]
-            qv = findall(x-> x == ampInfo[i][posnB], Brow)[1]
+            qu = findfirst(x-> x == ampInfo[i][posnA], Acol)[1]# [1] since it returns an array [1]
+            qv = findfirst(x-> x == ampInfo[i][posnB], Brow)[1]
             matM[qu,qv] = amps[i]
         end
         #U, s, V = svd(matM)
@@ -541,7 +541,8 @@ function tensor22move(tensor,face)# place middle edge at last position
                 iMod = copy(indx[i])
                 ampsA = numchop(amps[i] * Fsymb(j1,j3,j,j4,j2,j5))
                 push!(famps,ampsA)
-                push!(findx,insert!(deleteat!(iMod,flast),flast,j))
+                iMod[flast] = j
+                push!(findx,iMod)
                 #fc = findall(x-> x == iMod,indxf1 )
             end
         end
@@ -567,6 +568,22 @@ function tensor22move(tensor,face)# place middle edge at last position
     return indxeff, qq
 end
 
+export tensor22moveA
+
+function swap2(vec,a,b)
+    vec[a],vec[b] = vec[b], vec[a]
+    return vec
+end
+
+function tensor22moveA(tensor,posF)
+    glu = tensorGlue(tensor,dataFsymb(),posF,[1,5,2,4,6])
+    n = posF[end]
+    m = length(glu[1][1])
+    swp = @. swap2(glu[1],n,m)
+    tensorN = swp, glu[2]
+    ans = tensorSum(tensorN,[length(glu[1][1])])
+    return ans
+end
 
 # For 3-1 move, we will use SVD -- i.e. use the function fullSplitTet3D or fullSplit3D
 

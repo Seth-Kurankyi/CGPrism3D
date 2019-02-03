@@ -34,8 +34,8 @@ using LinearAlgebra
 
 ## 2-2 move on faces [5,6,9,8,1] and [4,6,11,12,2] to switch diagonals -- gets prism B
 
-@time fa1 = tensor22move(prA,[5,6,8,9,1]) # face [i,l,j,k,n]
-@time prB = tensor22move(fa1,[4,6,12,11,2])
+@time fa1 = tensor22moveA(prA,[5,6,8,9,1]) # face [i,l,j,k,n]
+@time prB = tensor22moveA(fa1,[4,6,12,11,2])
 @show sum(prB[2]-prA[2])
 
 
@@ -63,7 +63,8 @@ ub, vb = spltB[1], spltB[2]
 @time pruvAA = tensorSumTet3D(pruvA,[1])
 
 # 2-2 move /F-move on faces 0,1,2,(3,4)- not necessary ?
-@time fA0F = tensor22move(pruvAA,[18,15,6,2,7])
+#@time fA0FN = tensor22moveA(pruvAA,[18,15,6,2,7])
+@time fA0F = tensor22moveA(pruvAA,[18,15,6,2,7])
 #@time fA1F = tensor22move(pruvAA,[17,18,10,9,8])
 #@time fA2F = tensor22move(pruvAA,[14,13,3,2,4])
 #@time fA3F = tensor22move(pruvAA,[17,16,14,5,12])
@@ -71,8 +72,8 @@ ub, vb = spltB[1], spltB[2]
 #@show (length(fA0F[2]),length(fA1F[2]),length(fA2F[2]),length(fA3F[2]),length(fA4F[2]))
 
 
-@time fA01F = tensor22move(fA0F,[17,18,10,9,8])
-@time fA012F = tensor22move(fA01F,[14,13,3,2,4])
+@time fA01F = tensor22moveA(fA0F,[17,18,10,9,8])
+@time fA012F = tensor22moveA(fA01F,[14,13,3,2,4])
 #@time fA0123F = tensor22move(fA012F,[17,16,14,5,12])
 #@time fA01234F = tensor22move(fA0123F,[10,11,5,3,1])
 #@show (length(fA012F[2]),length(fA0123F[2]),length(fA01234F[2]))
