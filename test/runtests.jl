@@ -29,32 +29,37 @@ using LinearAlgebra
 
 # Create a prism from three tetrahedra -- equivalent to dataA
 @time tet2 = tensorGlueTet3D(dataT,dataT,[1,2,3],[1,2,3])
-@time prA = tensorGlueTet3D(tet2,dataT,[2,7,9],[1,2,3])
+@time prAn = tensorGlueTet3D(tet2,dataT,[2,7,9],[1,2,3])
+sp = sortperm(prAn[1])
+prA = prAn[1][sp], prAn[2][sp]
 @show sum(prA[2]-dataA[2])
+
+#@time fullSplitTet3D(prA,[4,5,6],[7,8,9,10,11,12],[1,2,3]);
+#@time fullSplit3D(prA,[4,5,6],[7,8,9,10,11,12],[1,2,3]);
 
 ## 2-2 move on faces [5,6,9,8,1] and [4,6,11,12,2] to switch diagonals -- gets prism B
 
-@time fa1 = tensor22moveA(prA,[5,6,8,9,1]) # face [i,l,j,k,n]
-@time prB = tensor22moveA(fa1,[4,6,12,11,2])
-@show sum(prB[2]-prA[2])
+#@time fa1 = tensor22moveB(prA,[5,6,8,9,1]) # face [i,l,j,k,n]
+#@time prB = tensor22moveB(fa1,[4,6,12,11,2])
+#@show sum(prB[2]-prA[2])
 
 
 # Split prisms into tetrahedra and pyramid 
 
-@time spltA = fullSplitTet3D(prA,[4,5,6],[7,8,9,10,11,12],[1,2,3]) # split into U, V
-ua, va = spltA[1], spltA[2]
+#@time spltA = fullSplitTet3D(prA,[4,5,6],[7,8,9,10,11,12],[1,2,3]) # split into U, V
+#ua, va = spltA[1], spltA[2]
 
-@time spltB = fullSplitTet3D(prB,[6,9,11],[3,4,5,7,8,12],[10,2,1]) # split into U, V
-ub, vb = spltB[1], spltB[2]
+#@time spltB = fullSplitTet3D(prB,[6,9,11],[3,4,5,7,8,12],[10,2,1]) # split into U, V
+#ub, vb = spltB[1], spltB[2]
 
-@show (sum(ub[2]-dataT[2]),sum(vb[2]-tet2[2]))
-@show (sum(ua[2]-dataT[2]),sum(va[2]-tet2[2]))
+#@show (sum(ub[2]-dataT[2]),sum(vb[2]-tet2[2]))
+#@show (sum(ua[2]-dataT[2]),sum(va[2]-tet2[2]))
 
 # Glue tetrahedra and pyramids back into effective prism
 
-@time uavb = tensorGlueTet3D(ua,vb,[1,3,5],[2,6,8])
-@time ubva = tensorGlueTet3D(ub,va,[1,3,5],[6,5,8])
-@show (sum(uavb[2]-prA[2]),sum(ubva[2]-prA[2]))
+#@time uavb = tensorGlueTet3D(ua,vb,[1,3,5],[2,6,8])
+#@time ubva = tensorGlueTet3D(ub,va,[1,3,5],[6,5,8])
+#@show (sum(uavb[2]-prA[2]),sum(ubva[2]-prA[2]))
 
 
 #Using only Prism A to coarse grain 
@@ -65,6 +70,7 @@ ub, vb = spltB[1], spltB[2]
 # 2-2 move /F-move on faces 0,1,2,(3,4)- not necessary ?
 #@time fA0FN = tensor22moveA(pruvAA,[18,15,6,2,7])
 @time fA0F = tensor22moveA(pruvAA,[18,15,6,2,7])
+@time fA0F = tensor22move(pruvAA,[18,15,6,2,7])
 #@time fA1F = tensor22move(pruvAA,[17,18,10,9,8])
 #@time fA2F = tensor22move(pruvAA,[14,13,3,2,4])
 #@time fA3F = tensor22move(pruvAA,[17,16,14,5,12])
@@ -72,8 +78,8 @@ ub, vb = spltB[1], spltB[2]
 #@show (length(fA0F[2]),length(fA1F[2]),length(fA2F[2]),length(fA3F[2]),length(fA4F[2]))
 
 
-@time fA01F = tensor22moveA(fA0F,[17,18,10,9,8])
-@time fA012F = tensor22moveA(fA01F,[14,13,3,2,4])
+@time fA01F = tensor22moveB(fA0F,[17,18,10,9,8])
+@time fA012F = tensor22moveB(fA01F,[14,13,3,2,4])
 #@time fA0123F = tensor22move(fA012F,[17,16,14,5,12])
 #@time fA01234F = tensor22move(fA0123F,[10,11,5,3,1])
 #@show (length(fA012F[2]),length(fA0123F[2]),length(fA01234F[2]))
@@ -87,6 +93,8 @@ ub, vb = spltB[1], spltB[2]
 #@show (length(CGPrsmA1[1][2]),length(CGPrsmA1[2][2]),length(CGPrsmA2[1][2]),length(CGPrsmA2[2][2]))
 @show ( sum( CGPrsmA1[2][2] - prA[2]) ) #, sum( CGPrsmA2[2][2] - prA[2]) )
 
+
+@show sort(permuteInd.(CGPrsmA1[2][1])) == (prA[1])
 # Now Using prsm A and B to glue and coarsegrain
 
 #@time pruv = tensorGlueTet3D(uavb,ubva,[1,2,6,7,8],[3,2,4,10,9]) # get effective prism

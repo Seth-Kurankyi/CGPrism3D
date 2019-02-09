@@ -11,7 +11,7 @@ function numchop(num::Complex)
 end
 
 # Define k-level of SU(2)_k
-const K = 4 # K-level
+const K = 3 # K-level
 const x = K+1 #number of spins
 const y = K/2 # maximum spin
 
@@ -334,7 +334,7 @@ function fullSplitTet3D(dataM,posnA,posnB,posnC) # posnA,B,C must be vectors @as
 end
 
 # This doesn't take care of dimension factors
-function fullSplit3D(dataM,posnA,posnB,posnC) # posnA,B,C must be vectors @assert length(dataM) = vcat(A,B,C)
+function fullSplit3DOld(dataM,posnA,posnB,posnC) # posnA,B,C must be vectors @assert length(dataM) = vcat(A,B,C)
     indx = dataM[1] 
     ampvals = dataM[2]
     #posAC = vcat(posnA,posnC) # assert posnA,posnC must be both vectors
@@ -378,6 +378,62 @@ function fullSplit3D(dataM,posnA,posnB,posnC) # posnA,B,C must be vectors @asser
                 push!(indxsU,blkU)
                 push!(indxsV,blkV)
             end    
+        end
+    end
+    solU = collect(Iterators.flatten(ampsU))
+    solV = collect(Iterators.flatten(ampsV))
+    ansU = solU/solU[1] # normalization condition
+    ansV = solV/solV[1]
+    indxUs = collect(Iterators.flatten(indxsU))
+    indxVs = collect(Iterators.flatten(indxsV))
+    return (indxUs,ansU),(indxVs,ansV) #,indxUV
+end
+
+function fullSplit3D(dataM,posnA,posnB,posnC) # posnA,B,C must be vectors @assert length(dataM) = vcat(A,B,C)
+    indx = dataM[1] 
+    ampvals = dataM[2]
+    #posAC = vcat(posnA,posnC) # assert posnA,posnC must be both vectors
+    #posBC = vcat(posnB,posnC) # assert posnB,posnC must be both vectors
+    #indxU = unique(getindex.(indx, [posAC]))
+    #indxV = unique(getindex.(indx, [posBC]))
+    ampsC = unique(getindex.(indx, [posnC])) # get all unique spins C (jd1,jd2,je1) 
+    ampsU = [] # this will store all amplitudes for U^C_{A}
+    ampsV = [] # this will store all amplitudes for V^C_{B}
+    indxsU = []
+    indxsV = []
+    #indxUV = [] # if we want this will store all spins in the right order
+    for i in 1:length(ampsC) # loop over the unique spins
+        #jd1 = ampsC[i][1]; jd2 = ampsC[i][2]; je1 = ampsC[i][3]  #jd1,jd2,je1 in spin C form a triangle
+        #if delta(jd1,jd2,je1) != 0
+        #spinC = [jd1,jd2,je1]
+        block = tensorBlock(dataM,posnA,posnB,posnC,ampsC[i])
+        mat = block[1]
+        blkU = block[2]
+        blkV = block[3]
+        if mat != 0
+            U, s, V = svd(mat)
+            #truncate and use only first singular value
+            U1 = U[:,1] 
+            V1 = V[:,1]
+            s1 = s[1]
+            valU = U1*sqrt(s1)#*sqrt(prod(visqrt.(ampsC[i]))) # multiply by leftover dimension factors
+            valV = V1*sqrt(s1)#*sqrt(prod(visqrt.(ampsC[i])))
+            # valU,valV are all either real or purely imaginary
+            valU = real(valU) - imag(valU) # take -ve of imaginary part if it gives only imag
+            valV = real(valV) + imag(valV)
+            #ja1 = blkU[1][1]; jb1 = blkU[1][2]; jg = blkU[1][3] # pick the first spins in U
+            #Fixing sign problem -- keep the same sign for U and Tetra6j symbol 
+            #if sign(valU[1]) == sign(Tetra6j(jd1,jd2,je1,ja1,jb1,jg) )
+            push!(ampsU, valU)#/valU[1])
+            push!(ampsV, valV)#/valV[1])
+            push!(indxsU,blkU)
+            push!(indxsV,blkV)
+            #else
+                #push!(ampsU, -valU)#/valU[1])
+                #push!(ampsV, -valV)#/valV[1])
+                #push!(indxsU,blkU)
+                #push!(indxsV,blkV)
+            #end    
         end
     end
     solU = collect(Iterators.flatten(ampsU))
@@ -568,7 +624,7 @@ function tensor22move(tensor,face)# place middle edge at last position
     return indxeff, qq
 end
 
-export tensor22moveA
+export tensor22moveA, tensor22moveB, permuteInd
 
 function swap2(vec,a,b)
     vec[a],vec[b] = vec[b], vec[a]
@@ -585,7 +641,22 @@ function tensor22moveA(tensor,posF)
     return ans
 end
 
+function tensor22moveB(tensor,posF)
+    glu = tensorGlueTet3D(tensor,dataTet(),posF,[1,5,2,4,6])
+    n = posF[end]
+    m = length(glu[1][1])
+    swp = @. swap2(glu[1],n,m)
+    tensorN = swp, glu[2]
+    ans = tensorSumTet3D(tensorN,[m])
+    return ans
+end
 # For 3-1 move, we will use SVD -- i.e. use the function fullSplitTet3D or fullSplit3D
+
+function permuteInd(vec)
+    perm = [5,1,11,2,6,3,10,12,7,8,4,9]
+    nvec = vec[perm]
+    return nvec
+end
 
 
 end # module
