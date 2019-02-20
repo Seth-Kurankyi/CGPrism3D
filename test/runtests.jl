@@ -94,7 +94,11 @@ prA = prAn[1][sp], prAn[2][sp]
 @show ( sum( CGPrsmA1[2][2] - prA[2]) ) #, sum( CGPrsmA2[2][2] - prA[2]) )
 
 
-@show sort(permuteInd.(CGPrsmA1[2][1])) == (prA[1])
+#@show sort(permuteInd.(CGPrsmA1[2][1])) == (prA[1])
+@time cgprsm = tensorPermute(CGPrsmA1[2])
+@show length(cgprsm[1])
+@show sort(cgprsm[1]) == sort(prA[1])
+
 # Now Using prsm A and B to glue and coarsegrain
 
 #@time pruv = tensorGlueTet3D(uavb,ubva,[1,2,6,7,8],[3,2,4,10,9]) # get effective prism

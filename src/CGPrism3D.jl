@@ -624,7 +624,7 @@ function tensor22move(tensor,face)# place middle edge at last position
     return indxeff, qq
 end
 
-export tensor22moveA, tensor22moveB, permuteInd
+export tensor22moveA, tensor22moveB, permuteInd, tensorPermute
 
 function swap2(vec,a,b)
     vec[a],vec[b] = vec[b], vec[a]
@@ -658,5 +658,11 @@ function permuteInd(vec)
     return nvec
 end
 
+
+function tensorPermute(tensor)
+    indx = tensor[1]
+    indxN = permuteInd.(indx)
+    return indxN , tensor[2]
+end
 
 end # module
