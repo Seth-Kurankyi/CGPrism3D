@@ -553,6 +553,20 @@ function tensor22move(tensor,face,y0 = y)# place middle edge at last position
     return indxeff, qq
 end
 
+function permuteInd(vec)
+    perm = [5,1,11,2,6,3,10,12,7,8,4,9]
+    nvec = vec[perm]
+    return nvec
+end
+
+
+function tensorPermute(tensor)
+    indx = tensor[1]
+    indxN = permuteInd.(indx)
+    return indxN , tensor[2]
+end
+
+
 export InitialLoop
 function InitialLoop(dataT,Kt = K )
 
