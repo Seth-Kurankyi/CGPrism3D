@@ -8,29 +8,40 @@ using LinearAlgebra
 #const y = K/2
 
 ###### Run algo complete #####
+K = 2
+Kdata = [K]
+Kdistr = [1]
 
-# intial data
-@time dataT = dataTet();
-@time dataF = dataFsymb();
-@time dataA = dataPrsmA();
+#intial data
+@time dataTold = dataTet(K);
+@time dataT = sumT(Kdata,Kdistr)
+@show dataT == dataTold
+@time dataF = dataFsymb(K);
+@time dataA = dataPrsmA(K);
 
 # inital prism
-@time tet2 = tensorGlueTet3D(dataT,dataT,[1,2,3],[1,2,3])
-@time prA = tensorGlueTet3D(tet2,dataT,[2,7,9],[1,2,3])
-
+@time tet2 = tensorGlueTet3D(dataT,dataT,[1,2,3],[1,2,3],K)
+@time prA = tensorGlueTet3D(tet2,dataT,[2,7,9],[1,2,3],K)
+@show length(prA[1])
+@show sort(prA[1]) == sort(dataA[1])
+@show sort(prA[2]) == sort(dataA[2])
+# ##
+# @time pruvA = tensorGlueTet3D(prA,prA,[1,5,6,8,9],[2,4,6,12,11],K)
+# @time pruvAA = tensorSumTet3D(pruvA,[1],K)
 #
-@time pruvA = tensorGlueTet3D(prA,prA,[1,5,6,8,9],[2,4,6,12,11])
-@time pruvAA = tensorSumTet3D(pruvA,[1])
+# @time fA0F = tensor22move(pruvAA,[18,15,6,2,7],K)
+#
+# @time fA01F = tensor22move(fA0F,[17,18,10,9,8],K)
+# @time fA012F = tensor22move(fA01F,[14,13,3,2,4],K)
+#
+# @time f133A = fullSplitTet3D(fA012F,[9,6,18],[1,2,3,4,5,10,12,13,14,15,16,17],[7,8,11],K)
+# @time CGPrsmA1 = fullSplitTet3D(f133A[2],[8,10,2],[1,3,5,6,7,9,12,14,15],[13,4,11],K)
+#
+# @time cgprsm = tensorPermute(CGPrsmA1[2])
+# @show length(cgprsm[1])
+# @show sort(cgprsm[1]) == sort(prA[1])
+# @show sum(cgprsm[2])-sum(prA[2])
 
-@time fA0F = tensor22move(pruvAA,[18,15,6,2,7])
-
-@time fA01F = tensor22move(fA0F,[17,18,10,9,8])
-@time fA012F = tensor22move(fA01F,[14,13,3,2,4])
-
-@time f133A = fullSplitTet3D(fA012F,[9,6,18],[1,2,3,4,5,10,12,13,14,15,16,17],[7,8,11])
-@time CGPrsmA1 = fullSplitTet3D(f133A[2],[8,10,2],[1,3,5,6,7,9,12,14,15],[13,4,11])
-
-@time cgprsm = tensorPermute(CGPrsmA1[2])
 
 
 # Testing Penstagon Identity -- related to 3-2 Pachner move
@@ -104,18 +115,18 @@ using LinearAlgebra
 #@time fA01234F = tensor22move(fA0123F,[10,11,5,3,1])
 #@show (length(fA012F[2]),length(fA0123F[2]),length(fA01234F[2]))
 
-@time f133A = fullSplitTet3D(fA012F,[9,6,18],[1,2,3,4,5,10,12,13,14,15,16,17],[7,8,11])
+# @time f133A = fullSplitTet3D(fA012F,[9,6,18],[1,2,3,4,5,10,12,13,14,15,16,17],[7,8,11])
 #@time f233A = fullSplitTet3D(fA012F,[13,15,2],[1,3,5,6,8,9,10,11,12,14,17,18],[7,4,16])
 #@show (length(f133A[1][2]),length(f133A[2][2]),length(f233A[1][2]),length(f233A[2][2]))
 
-@time CGPrsmA1 = fullSplitTet3D(f133A[2],[8,10,2],[1,3,5,6,7,9,12,14,15],[13,4,11])
+# @time CGPrsmA1 = fullSplitTet3D(f133A[2],[8,10,2],[1,3,5,6,7,9,12,14,15],[13,4,11])
 #@time CGPrsmA2 = fullSplitTet3D(f233A[2],[6,4,12],[1,2,3,7,9,10,11,14,15],[13,5,8])
 #@show (length(CGPrsmA1[1][2]),length(CGPrsmA1[2][2]),length(CGPrsmA2[1][2]),length(CGPrsmA2[2][2]))
 # @show ( sum( CGPrsmA1[2][2] - prA[2]) ) #, sum( CGPrsmA2[2][2] - prA[2]) )
 
 
 #@show sort(permuteInd.(CGPrsmA1[2][1])) == (prA[1])
-@time cgprsm = tensorPermute(CGPrsmA1[2])
+# @time cgprsm = tensorPermute(CGPrsmA1[2])
 # @show length(cgprsm[1])
 # @show sort(cgprsm[1]) == sort(prA[1])
 

@@ -41,7 +41,7 @@ function qnfact(n::Float64,K)
 end
 
 #Define square root of quantum dimension
-function visqrt(i::Float64)
+function visqrt(i::Float64,K)
     sol = ((-1+0im)^i )*sqrt(qn(2*i+1,K))
     return sol
 end
@@ -93,12 +93,11 @@ export Tetra6j, delta, visqrt
 function Tetra6j(i::Float64,j::Float64,m::Float64,k::Float64,l::Float64,n::Float64,K)
     sol = 0
     if delta(i,j,m,K) != 0 && delta(i,l,n,K) != 0 && delta(k,j,n,K) != 0 && delta(k,l,m,K) != 0
-        dims = prod(visqrt.([i,j,m,k,l,n]))
+        dims = prod(visqrt.([i,j,m,k,l,n],K))
         sol =  numchop(dims*Gsymb(i,j,m,k,l,n,K))
     end
     return sol
 end
-
 
 
 
@@ -107,6 +106,7 @@ export dataTet, dataFsymb, dataPrsmA
 # get all non-zero amplitudes and spins
 
 # get all non-zero tetrahedron amplitude and spins (also for F-symbol)
+
 
 function dataTet(K)
     t6j = []
@@ -133,6 +133,35 @@ function dataTet(K)
     end
     return t6j,t6s
 end
+
+export sumT
+function sumT(Kdata,Kdistr)
+    n = length(Kdata)
+    m = length(Kdistr)
+    # @assert n!=m "Kdata and Kdistr must have the same length"
+
+    dataCreation = []
+    for i in 1:n
+        push!(dataCreation,dataTet(Kdata[i]))
+    end
+
+    posmax = argmax(Kdata)
+
+    setspin = dataCreation[posmax][1]
+    setAmp = zeros(length(setspin))
+
+    for i in 1:length(setspin)
+        for j in 1:n
+            pos = findfirst(x->x==setspin[i],dataCreation[j][1])
+            if typeof(pos) == Int
+                setAmp[i] += Kdistr[j]*dataCreation[j][2][pos]
+            end
+        end
+    end
+
+    return setspin,setAmp
+end
+
 
 function dataFsymb(K)
     t6j = []
@@ -162,11 +191,11 @@ end
 
 #Prism A as gluing together three tetrahedra ;  Prism B changing diagonals using F-symbol
 function prismA(jd1::Float64,jd2::Float64,je1::Float64,jb1::Float64,jg::Float64,ja1::Float64,jc::Float64,
-                jb2::Float64,jf1::Float64,ja2::Float64,jf2::Float64,je2::Float64)
+                jb2::Float64,jf1::Float64,ja2::Float64,jf2::Float64,je2::Float64,K)
     sol = 0
-    if delta(jd1,jd2,je1) != 0 && delta(jd1,jb1,jg) != 0 && delta(ja1,jd2,jg) != 0 && delta(ja1,jb1,je1) != 0 && delta(jd1,jc,jb2) != 0 && delta(jf1,jd2,jb2) != 0 && delta(jf1,jc,je1) != 0 && delta(jd1,ja2,jf2) != 0 && delta(jc,je2,jf2) != 0 && delta(jb2,je2,ja2) != 0
-        dims = visqrt(ja1)*visqrt(jb1)*visqrt(jg)*visqrt(jf1)*visqrt(jc)*visqrt(jb2)*visqrt(je2)*visqrt(ja2)*visqrt(jf2)*visqrt(jd1)*visqrt(jd2)*visqrt(je1)
-        sol =  dims*Gsymb(jd1,jd2,je1,ja1,jb1,jg) * Gsymb(jd1,jd2,je1,jf1,jc,jb2) * Gsymb(jd1,jc,jb2,je2,ja2,jf2)
+    if delta(jd1,jd2,je1,K) != 0 && delta(jd1,jb1,jg,K) != 0 && delta(ja1,jd2,jg,K) != 0 && delta(ja1,jb1,je1,K) != 0 && delta(jd1,jc,jb2,K) != 0 && delta(jf1,jd2,jb2,K) != 0 && delta(jf1,jc,je1,K) != 0 && delta(jd1,ja2,jf2,K) != 0 && delta(jc,je2,jf2,K) != 0 && delta(jb2,je2,ja2,K) != 0
+        dims = visqrt(ja1,K)*visqrt(jb1,K)*visqrt(jg,K)*visqrt(jf1,K)*visqrt(jc,K)*visqrt(jb2,K)*visqrt(je2,K)*visqrt(ja2,K)*visqrt(jf2,K)*visqrt(jd1,K)*visqrt(jd2,K)*visqrt(je1,K)
+        sol =  dims*Gsymb(jd1,jd2,je1,ja1,jb1,jg,K) * Gsymb(jd1,jd2,je1,jf1,jc,jb2,K) * Gsymb(jd1,jc,jb2,je2,ja2,jf2,K)
     end
     return sol
 end
@@ -267,7 +296,7 @@ function fullSplitTet3D(dataM,posnA,posnB,posnC,K) # posnA,B,C must be vectors @
     #indxUV = [] # if we want this will store all spins in the right order
     for i in 1:length(ampsC) # loop over the unique spins
         jd1 = ampsC[i][1]; jd2 = ampsC[i][2]; je1 = ampsC[i][3]  #jd1,jd2,je1 in spin C form a triangle
-        if delta(jd1,jd2,je1) != 0
+        if delta(jd1,jd2,je1,K) != 0
             spinC = [jd1,jd2,je1]
             block = tensorBlock(dataM,posnA,posnB,posnC,spinC)
             mat = block[1]
@@ -278,8 +307,8 @@ function fullSplitTet3D(dataM,posnA,posnB,posnC,K) # posnA,B,C must be vectors @
             U1 = U[:,1]
             V1 = V[:,1]
             s1 = s[1]
-            valU = U1*sqrt(s1)*sqrt(prod(visqrt.(ampsC[i]))) # multiply by leftover dimension factors
-            valV = V1*sqrt(s1)*sqrt(prod(visqrt.(ampsC[i])))
+            valU = U1*sqrt(s1)*sqrt(prod(visqrt.(ampsC[i],K))) # multiply by leftover dimension factors
+            valV = V1*sqrt(s1)*sqrt(prod(visqrt.(ampsC[i],K)))
             # valU,valV are all either real or purely imaginary
             valU = real(valU) - imag(valU) # take -ve of imaginary part if it gives only imag
             valV = real(valV) + imag(valV)
