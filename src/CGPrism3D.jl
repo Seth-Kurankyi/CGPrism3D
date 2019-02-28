@@ -10,10 +10,10 @@ function numchop(num::Complex)
     numchop(imag(num)) == 0 ? numchop(real(num)) : Complex(numchop(real(num)), numchop(imag(num)))
 end
 
-# Define k-level of SU(2)_k
-const K = 4 # K-level
-const x = K+1 #number of spins
-const y = K/2 # maximum spin
+# # Define k-level of SU(2)_k
+# const K = 4 # K-level
+# const x = K+1 #number of spins
+# const y = K/2 # maximum spin
 
 #Define all functions needed for G-symbol
 # Define delta{ijk} -> coupling rules
@@ -111,6 +111,8 @@ export dataTet, dataFsymb, dataPrsmA
 function dataTet(K)
     t6j = []
     t6s = []
+    x = K+1
+    y = K/2
     for ja in 0.:0.5:y, jb in 0.:0.5:y, jc in 0.:0.5:y
         if delta(ja,jb,jc,K) != 0
             for jd in 0.:0.5:y, je in 0.:0.5:y
@@ -135,6 +137,8 @@ end
 function dataFsymb(K)
     t6j = []
     t6s = []
+    x = K+1
+    y = K/2
     for ja in 0.:0.5:y, jb in 0.:0.5:y, jc in 0.:0.5:y
         if delta(ja,jb,jc,K) != 0
             for jd in 0.:0.5:y, je in 0.:0.5:y
@@ -170,6 +174,8 @@ end
 function dataPrsmA(K)
     ampsInfo = Array{Float64,1}[]
     amps = Float64[]
+    x = K+1
+    y = K/2
     for jd1 in 0.:0.5:y, jd2 in 0.:0.5:y, je1 in 0.:0.5:y
         if delta(jd1,jd2,je1,K) != 0
             for jb1 in 0.:0.5:y, jg in 0.:0.5:y
@@ -302,62 +308,6 @@ function fullSplitTet3D(dataM,posnA,posnB,posnC,K) # posnA,B,C must be vectors @
 end
 
 
-function fullSplit3D(dataM,posnA,posnB,posnC) # posnA,B,C must be vectors @assert length(dataM) = vcat(A,B,C)
-    indx = dataM[1]
-    ampvals = dataM[2]
-    #posAC = vcat(posnA,posnC) # assert posnA,posnC must be both vectors
-    #posBC = vcat(posnB,posnC) # assert posnB,posnC must be both vectors
-    #indxU = unique(getindex.(indx, [posAC]))
-    #indxV = unique(getindex.(indx, [posBC]))
-    ampsC = unique(getindex.(indx, [posnC])) # get all unique spins C (jd1,jd2,je1)
-    ampsU = [] # this will store all amplitudes for U^C_{A}
-    ampsV = [] # this will store all amplitudes for V^C_{B}
-    indxsU = []
-    indxsV = []
-    #indxUV = [] # if we want this will store all spins in the right order
-    for i in 1:length(ampsC) # loop over the unique spins
-        #jd1 = ampsC[i][1]; jd2 = ampsC[i][2]; je1 = ampsC[i][3]  #jd1,jd2,je1 in spin C form a triangle
-        #if delta(jd1,jd2,je1) != 0
-        #spinC = [jd1,jd2,je1]
-        block = tensorBlock(dataM,posnA,posnB,posnC,ampsC[i])
-        mat = block[1]
-        blkU = block[2]
-        blkV = block[3]
-        if mat != 0
-            U, s, V = svd(mat)
-            #truncate and use only first singular value
-            U1 = U[:,1]
-            V1 = V[:,1]
-            s1 = s[1]
-            valU = U1*sqrt(s1)#*sqrt(prod(visqrt.(ampsC[i]))) # multiply by leftover dimension factors
-            valV = V1*sqrt(s1)#*sqrt(prod(visqrt.(ampsC[i])))
-            # valU,valV are all either real or purely imaginary
-            valU = real(valU) - imag(valU) # take -ve of imaginary part if it gives only imag
-            valV = real(valV) + imag(valV)
-            #ja1 = blkU[1][1]; jb1 = blkU[1][2]; jg = blkU[1][3] # pick the first spins in U
-            #Fixing sign problem -- keep the same sign for U and Tetra6j symbol
-            #if sign(valU[1]) == sign(Tetra6j(jd1,jd2,je1,ja1,jb1,jg) )
-            push!(ampsU, valU)#/valU[1])
-            push!(ampsV, valV)#/valV[1])
-            push!(indxsU,blkU)
-            push!(indxsV,blkV)
-            #else
-                #push!(ampsU, -valU)#/valU[1])
-                #push!(ampsV, -valV)#/valV[1])
-                #push!(indxsU,blkU)
-                #push!(indxsV,blkV)
-            #end
-        end
-    end
-    solU = collect(Iterators.flatten(ampsU))
-    solV = collect(Iterators.flatten(ampsV))
-    ansU = solU/solU[1] # normalization condition
-    ansV = solV/solV[1]
-    indxUs = collect(Iterators.flatten(indxsU))
-    indxVs = collect(Iterators.flatten(indxsV))
-    return (indxUs,ansU),(indxVs,ansV) #,indxUV
-end
-
 ## Glue any two tensors A, B along shared faces ..
 function tensorGlue(tensorB,tensorA,posnB,posnA)# glue two tensors TA,TB along posnA from TA and posnB from TB
     indxA = tensorA[1] # spins of TA
@@ -428,12 +378,12 @@ end
 
 
 #Take care of dimesion factors after gluing
-function tensorGlueTet3D(tensorB,tensorA,posnB,posnA)
+function tensorGlueTet3D(tensorB,tensorA,posnB,posnA,K)
     indx, amps = tensorGlue(tensorB,tensorA,posnB,posnA)
     face = getindex.(indx, [posnB])
     ans = complex(ones(length(face)))
     for i in 1:length(face)
-        ans[i] = prod(visqrt.(face[i]))
+        ans[i] = prod(visqrt.(face[i],K))
     end
     ampsN = @. amps / ans
     ampsN = real(ampsN)+imag(ampsN)
@@ -474,11 +424,11 @@ end
 
 # Take care of dimension factors when summing. This makes sure Pachner 3-2 move works
 # For now this only works for summing over one index-- we can change this easily
-function tensorSumTet3D(tensor,posnN)
+function tensorSumTet3D(tensor,posnN,K)
     indx = tensor[1]
     amps = tensor[2]
     blkdims = getindex.(indx,posnN)
-    ampsN = amps .*visqrt.(blkdims)
+    ampsN = amps .*visqrt.(blkdims,K)
     ampsN2 = real(ampsN) - imag(ampsN)
     data = indx, ampsN2
     ans = tensorSum(data,posnN)
@@ -486,7 +436,9 @@ function tensorSumTet3D(tensor,posnN)
 end
 
 # Performs an F-move on a face.. equivalent to 2-2 Pachner move -- this uses Fsymbol
-function tensor22move(tensor,face)# place middle edge at last position
+function tensor22move(tensor,face,K)# place middle edge at last position
+    x = K+1
+    y = K/2
     # assert face contains 5 elements
     indx = tensor[1] # spins of TB
     amps = tensor[2]
@@ -506,9 +458,9 @@ function tensor22move(tensor,face)# place middle edge at last position
     #    ind = zeros(length(indx[1]))
         for j in 0.:0.5:y
             #iMod = deepcopy(indxf1u)
-            if delta(j1,j3,j) != 0 && delta(j2,j4,j) != 0 && Fsymb(j1,j3,j,j4,j2,j5) != 0
+            if delta(j1,j3,j,K) != 0 && delta(j2,j4,j,K) != 0 && Fsymb(j1,j3,j,j4,j2,j5,K) != 0
                 iMod = copy(indx[i])
-                ampsA = numchop(amps[i] * Fsymb(j1,j3,j,j4,j2,j5))
+                ampsA = numchop(amps[i] * Fsymb(j1,j3,j,j4,j2,j5,K))
                 push!(famps,ampsA)
                 iMod[flast] = j
                 push!(findx,iMod)
@@ -539,30 +491,6 @@ end
 
 export tensor22moveA, tensor22moveB, permuteInd, tensorPermute
 
-function swap2(vec,a,b)
-    vec[a],vec[b] = vec[b], vec[a]
-    return vec
-end
-
-function tensor22moveA(tensor,posF)
-    glu = tensorGlue(tensor,dataFsymb(),posF,[1,5,2,4,6])
-    n = posF[end]
-    m = length(glu[1][1])
-    swp = @. swap2(glu[1],n,m)
-    tensorN = swp, glu[2]
-    ans = tensorSum(tensorN,[length(glu[1][1])])
-    return ans
-end
-
-function tensor22moveB(tensor,posF)
-    glu = tensorGlueTet3D(tensor,dataTet(),posF,[1,5,2,4,6])
-    n = posF[end]
-    m = length(glu[1][1])
-    swp = @. swap2(glu[1],n,m)
-    tensorN = swp, glu[2]
-    ans = tensorSumTet3D(tensorN,[m])
-    return ans
-end
 # For 3-1 move, we will use SVD -- i.e. use the function fullSplitTet3D or fullSplit3D
 
 function permuteInd(vec)
