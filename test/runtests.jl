@@ -18,6 +18,7 @@ using LinearAlgebra
 @time tet2 = tensorGlueTet3D(dataT,dataT,[1,2,3],[1,2,3])
 @time prA = tensorGlueTet3D(tet2,dataT,[2,7,9],[1,2,3])
 
+#
 @time pruvA = tensorGlueTet3D(prA,prA,[1,5,6,8,9],[2,4,6,12,11])
 @time pruvAA = tensorSumTet3D(pruvA,[1])
 
