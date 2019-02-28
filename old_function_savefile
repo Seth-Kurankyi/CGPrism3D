@@ -1,0 +1,90 @@
+#Define G-symbol 2
+function Gsymb2(i::Float64,j::Float64,m::Float64,k::Float64,l::Float64,n::Float64)
+    sol = 0
+    if delta(i,j,m) != 0 && delta(i,l,n) != 0 && delta(k,j,n) != 0 && delta(k,l,m) != 0
+        sol = (-1+0im)^(i+j+k+l+m+n)*RacWig6j(i,j,m,k,l,n)
+    end
+    return sol
+end
+
+
+## Define Prisms
+
+function prismB(jd2p::Float64,jd1p::Float64,je2::Float64,jb2::Float64,jg::Float64,ja2::Float64,jc::Float64,
+                jb1::Float64,jf2::Float64,ja1::Float64,jf1::Float64,je1::Float64)
+    sol = 0
+    if delta(jd1p,jd2p,je2) != 0 && delta(jd2p,jb2,jg) != 0 && delta(ja2,jd1p,jg) != 0 && delta(ja2,jb2,je2) != 0 && delta(jd2p,jc,jb1) != 0 && delta(jf2,jd1p,jb1) != 0 && delta(jf2,jc,je2) != 0 && delta(jd2p,ja1,jf1) != 0 && delta(jc,je1,jf1) != 0 && delta(jb1,je1,ja1) != 0
+        for jd1 in 0.:0.5:y
+            if delta(jb1,jg,jd1) != 0 && delta(ja2,jf2,jd1) != 0
+                for jd2 in 0.:0.5:y
+                    if delta(ja1,jg,jd2) != 0 && delta(jb2,jf1,jd2) != 0
+                        sol += numchop(Fsymb(ja1,jg,jd2,jb2,jf1,jd2p)*Fsymb(jb1,jg,jd1,ja2,jf2,jd1p)*prismA(jd1,jd2,je1,jb1,jg,ja1,jc,jb2,jf1,ja2,jf2,je2))
+                    end
+                end
+            end
+        end
+    end
+    return sol
+end
+
+# This is the relabelling vertices. Does it work in general after one step in algorithm?
+function prismB2(jd2::Float64,jd1::Float64,je2::Float64,jb2::Float64,jg::Float64,ja2::Float64,jc::Float64,
+                jb1::Float64,jf2::Float64,ja1::Float64,jf1::Float64,je1::Float64)
+    return prismA(jd1,jd2,je1,jb1,jg,ja1,jc,jb2,jf1,ja2,jf2,je2)
+end
+
+# This doesn't take care of dimension factors
+function fullSplit3DOld(dataM,posnA,posnB,posnC) # posnA,B,C must be vectors @assert length(dataM) = vcat(A,B,C)
+    indx = dataM[1]
+    ampvals = dataM[2]
+    #posAC = vcat(posnA,posnC) # assert posnA,posnC must be both vectors
+    #posBC = vcat(posnB,posnC) # assert posnB,posnC must be both vectors
+    #indxU = unique(getindex.(indx, [posAC]))
+    #indxV = unique(getindex.(indx, [posBC]))
+    ampsC = unique(getindex.(indx, [posnC])) # get all unique spins C (jd1,jd2,je1)
+    ampsU = [] # this will store all amplitudes for U^C_{A}
+    ampsV = [] # this will store all amplitudes for V^C_{B}
+    indxsU = []
+    indxsV = []
+    #indxUV = [] # if we want this will store all spins in the right order
+    for i in 1:length(ampsC) # loop over the unique spins
+        jd1 = ampsC[i][1]; jd2 = ampsC[i][2]; je1 = ampsC[i][3]  #jd1,jd2,je1 in spin C form a triangle
+        if delta(jd1,jd2,je1) != 0
+            spinC = [jd1,jd2,je1]
+            block = tensorBlock(dataM,posnA,posnB,posnC,spinC)
+            mat = block[1]
+            blkU = block[2]
+            blkV = block[3]
+            U, s, V = svd(mat)
+            #truncate and use only first singular value
+            U1 = U[:,1]
+            V1 = V[:,1]
+            s1 = s[1]
+            valU = U1*sqrt(s1)#*sqrt(prod(visqrt.(ampsC[i]))) # multiply by leftover dimension factors
+            valV = V1*sqrt(s1)#*sqrt(prod(visqrt.(ampsC[i])))
+            # valU,valV are all either real or purely imaginary
+            valU = real(valU) - imag(valU) # take -ve of imaginary part if it gives only imag
+            valV = real(valV) + imag(valV)
+            ja1 = blkU[1][1]; jb1 = blkU[1][2]; jg = blkU[1][3] # pick the first spins in U
+            #Fixing sign problem -- keep the same sign for U and Tetra6j symbol
+            if sign(valU[1]) == sign(Tetra6j(jd1,jd2,je1,ja1,jb1,jg) )
+                push!(ampsU, valU)#/valU[1])
+                push!(ampsV, valV)#/valV[1])
+                push!(indxsU,blkU)
+                push!(indxsV,blkV)
+            else
+                push!(ampsU, -valU)#/valU[1])
+                push!(ampsV, -valV)#/valV[1])
+                push!(indxsU,blkU)
+                push!(indxsV,blkV)
+            end
+        end
+    end
+    solU = collect(Iterators.flatten(ampsU))
+    solV = collect(Iterators.flatten(ampsV))
+    ansU = solU/solU[1] # normalization condition
+    ansV = solV/solV[1]
+    indxUs = collect(Iterators.flatten(indxsU))
+    indxVs = collect(Iterators.flatten(indxsV))
+    return (indxUs,ansU),(indxVs,ansV) #,indxUV
+end
