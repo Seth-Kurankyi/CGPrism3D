@@ -11,21 +11,26 @@ using LinearAlgebra
 K = 2
 Kdata = [K]
 Kdistr = [1]
+loop = 1
+K2move = K
 
-#intial data
-@time dataTold = dataTet(K);
-@time dataT = sumT(Kdata,Kdistr)
-@show dataT == dataTold
-@time dataF = dataFsymb(K);
-@time dataA = dataPrsmA(K);
+@time IniData = sumT(Kdata,Kdistr)
+## inital prism
+@time dataT = dataTet(K);
+@show sort(IniData[1])==sort(dataT[1])
+@show numchop(sort(IniData[2]) - sort(dataT[2])) == zeros(length(dataT[2]))
 
-# inital prism
-@time tet2 = tensorGlueTet3D(dataT,dataT,[1,2,3],[1,2,3],K)
-@time prA = tensorGlueTet3D(tet2,dataT,[2,7,9],[1,2,3],K)
-@show length(prA[1])
-@show sort(prA[1]) == sort(dataA[1])
-@show sort(prA[2]) == sort(dataA[2])
-# ##
+# Algo
+@time Final = Algo(Kdata,Kdistr,loop,K2move)
+@show length(Final[1])
+@show sum(numchop(Final[2]).!=0)
+# @show numchop(sort(Final[2]) - sort(dataT[2])) == zeros(length(dataT[2]))
+
+@time tet2 = tensorGlueTet3D(dataT,dataT,[1,2,3],[1,2,3],newvisqrt,dataT)
+@time prA = tensorGlueTet3D(tet2,dataT,[2,7,9],[1,2,3],newvisqrt,dataT)
+@show sort(Final[1])==sort(prA[1])
+@show sum(sort(Final[2]) - sort(prA[2]))
+##
 # @time pruvA = tensorGlueTet3D(prA,prA,[1,5,6,8,9],[2,4,6,12,11],K)
 # @time pruvAA = tensorSumTet3D(pruvA,[1],K)
 #
