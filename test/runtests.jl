@@ -25,11 +25,82 @@ K2move = K
 @show length(Final[1])
 @show sum(numchop(Final[2]).!=0)
 # @show numchop(sort(Final[2]) - sort(dataT[2])) == zeros(length(dataT[2]))
+for i in 1:length(Final[1])
+    if delta(Final[1][i][1],Final[1][i][4],Final[1][i][14],2) == 0
+        print(1)
+    end
+end
+for i in 1:length(Final[1])
+    if delta(Final[1][i][1],Final[1][i][5],Final[1][i][12],2) == 0
+        print(2)
+    end
+end
+for i in 1:length(Final[1])
+    if delta(Final[1][i][12],Final[1][i][13],Final[1][i][2],2) == 0
+        print(3)
+    end
+end
+for i in 1:length(Final[1])
+    if delta(Final[1][i][17],Final[1][i][13],Final[1][i][18],2) == 0
+        print(4)
+    end
+end
+for i in 1:length(Final[1])
+    if delta(Final[1][i][17],Final[1][i][10],Final[1][i][9],2) == 0
+        print(5)
+    end
+end
+for i in 1:length(Final[1])
+    if delta(Final[1][i][10],Final[1][i][16],Final[1][i][7],2) == 0
+        print(6)
+    end
+end
+for i in 1:length(Final[1])
+    if delta(Final[1][i][9],Final[1][i][8],Final[1][i][3],2) == 0
+        print(7)
+    end
+end
+for i in 1:length(Final[1])
+    if delta(Final[1][i][2],Final[1][i][3],Final[1][i][5],2) == 0
+        print(8)
+    end
+end
+for i in 1:length(Final[1])
+    if delta(Final[1][i][14],Final[1][i][15],Final[1][i][18],2) == 0
+        print(9)
+    end
+end
+for i in 1:length(Final[1])
+    if delta(Final[1][i][11],Final[1][i][15],Final[1][i][4],2) == 0
+        print(10)
+    end
+end
+for i in 1:length(Final[1])
+    if delta(Final[1][i][16],Final[1][i][11],Final[1][i][6],2) == 0
+        print(11)
+    end
+end
+for i in 1:length(Final[1])
+    if delta(Final[1][i][6],Final[1][i][7],Final[1][i][8],2) == 0
+        print(12)
+    end
+end
 
-@time tet2 = tensorGlueTet3D(dataT,dataT,[1,2,3],[1,2,3],newvisqrt,dataT)
-@time prA = tensorGlueTet3D(tet2,dataT,[2,7,9],[1,2,3],newvisqrt,dataT)
-@show sort(Final[1])==sort(prA[1])
-@show sum(sort(Final[2]) - sort(prA[2]))
+for i in 1:length(Final[1])
+    if delta(Final[1][i][1],Final[1][i][11],Final[1][i][18],2) == 0
+        print(1.)
+    end
+end
+
+for i in 1:length(Final[1])
+    if delta(Final[1][i][8],Final[1][i][11],Final[1][i][10],2) == 0
+        print(2.)
+    end
+end
+# @time tet2 = tensorGlueTet3D(dataT,dataT,[1,2,3],[1,2,3],newvisqrt,dataT)
+# @time prA = tensorGlueTet3D(tet2,dataT,[2,7,9],[1,2,3],newvisqrt,dataT)
+# @show sort(Final[1])==sort(prA[1])
+# @show sum(sort(Final[2]) - sort(prA[2]))
 ##
 # @time pruvA = tensorGlueTet3D(prA,prA,[1,5,6,8,9],[2,4,6,12,11],K)
 # @time pruvAA = tensorSumTet3D(pruvA,[1],K)

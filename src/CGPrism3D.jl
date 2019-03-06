@@ -19,6 +19,7 @@ end
 
 #Define all functions needed for G-symbol
 # Define delta{ijk} -> coupling rules
+export delta
 function delta(i::Float64,j::Float64,k::Float64,K)
     sol = 0
     if i <=(j+k) && j<=(i+k) && k<=(i+j) && i+j+k <= K && 2*(i+j+k)%2 ==0
@@ -50,7 +51,7 @@ end
 
 #Define triangle equality
 function trian(i::Float64,j::Float64,k::Float64,K)
-    sol = 0
+    sol = 0.
     if delta(i,j,k,K) == 1
         sol = delta(i,j,k,K)*sqrt(qnfact(i+j-k,K)*qnfact(i-j+k,K)*qnfact(-i+j+k,K)/qnfact(i+j+k+1,K))
     end
@@ -544,13 +545,19 @@ function Algo(Kdata,Kdistr,loop::Int64,K2move)
     pruvEffSum = tensorSumTet3D(pruvEff,[3],newvisqrt,data)
     # #
     fA0F = tensor22move(pruvEffSum,[15,16,4,6,11],K2move,Fsymb)
-    fA01F = tensor22move(fA0F,[16,17,7,9,10],K2move,Fsymb)
-    fA012F = tensor22move(fA01F,[14,12,4,5,1],K2move,Fsymb)
+    fA01F = tensor22move(fA0F,[14,12,4,5,1],K2move,Fsymb)
+    fA012F = tensor22move(fA01F,[16,17,7,9,10],K2move,Fsymb)
+    # for i in 1:length(pruvEffSum[1])
+    #     print(delta(pruvEffSum[1][i][1],pruvEffSum[1][i][12],pruvEffSum[1][i][14],2))
+    # end
     # #
-    f133A = fullSplitTet3D(fA012F,[4,15,14],[2,3,5,6,7,8,9,10,12,13,16,17],[18,1,11],Kemb,newvisqrt,newTetra6j,data)
-    CGPrsmA1 = fullSplitTet3D(f133A[2],[11,4,5],[1,2,3,7,9,10,12,13,14],[6,8,15],Kemb,newvisqrt,newTetra6j,data)
-    perm = [9,2,6,1,5,3,7,8,12,11,10,4]
-    prA = tensorPermute(CGPrsmA1[2],perm)
+
+    # f133A = fullSplitTet3D(fA012F,[6,7,16],[1,2,3,4,5,9,12,13,14,15,17,18],[10,11,8],Kemb,newvisqrt,newTetra6j,data)
+    # CGPrsmA1 = fullSplitTet3D(f133A[2],[4,9,10],[2,3,5,6,7,8,11,13,15],[12,14,1],Kemb,newvisqrt,newTetra6j,data)
+    # f133A = fullSplitTet3D(fA012F,[4,15,14],[2,3,5,6,7,8,9,10,12,13,16,17],[18,1,11],Kemb,newvisqrt,newTetra6j,data)
+    # CGPrsmA1 = fullSplitTet3D(f133A[2],[11,4,5],[1,2,3,7,9,10,12,13,14],[6,8,15],Kemb,newvisqrt,newTetra6j,data)
+    # perm = [9,2,6,1,5,3,7,8,12,11,10,4]
+    # prA = tensorPermute(CGPrsmA1[2],perm)
     # end
 
     return fA012F
