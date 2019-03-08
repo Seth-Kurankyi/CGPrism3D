@@ -224,7 +224,9 @@ function tensorGlue(tensorB,tensorA,posnB,posnA)# glue two tensors TA,TB along p
     lena = collect(1:length(indxA[1]))
     deleteat!(lena,sort(posnA)) # assert needs posnA to be a vector
     #if length(posnA) > 1 deleteat!(lena,sort(posnA,dims=2) else  deleteat!(lena,sort(posnA)) end
-    shrdAB = Tuple{Array{Float64,1},Int64,Int64}[]
+    shrdAB = []#Tuple{Array{Float64,1},Int64,Int64}[]
+    shrddB = []
+    shrdABn = []
     qq = Array{Array{Float64,1},1}[]
     amps = Array{Float64,1}[]
     sa = sortperm(shrdA)
@@ -238,25 +240,24 @@ function tensorGlue(tensorB,tensorA,posnB,posnA)# glue two tensors TA,TB along p
     shrdAu = unique(shrdA)
     shrdBu = unique(shrdB)
     shrd = shrdAu
+    #println(shrdAu == shrdBu)
     if shrdAu == shrdBu
-        shrd = shrdAu
+        nothing
     else
         for i in shrdBu
-            shrd = shrdAu
+            #shrd = shrdAu
             if !(i in shrdAu)
                 push!(shrd,i)
             end
         end
     end
-    #cshrdA = countmap(shrdA)
-    #cshrdB = countmap(shrdB)
     for i in shrd
-        ca = count(x->x==i,shrdA)
-        cb = count(x->x==i,shrdB)
-        push!(shrdAB, (i, ca,cb ))
+        cna = count(x->x==i,shrdA)
+        cnb = count(x->x==i,shrdB)
+        push!(shrdAB, [i, cna,cnb ])
+        #println("Ca,Cna = ",ca,"\t",cna)
+        #println("Cb,Cnb = ",cb,"\t",cnb)
     end
-    cnt = 1
-    cntb = 1
     for i in shrdAB
         if i[2] == 0 || i[3] == 0 # Put condition for when one of a or b is zero
             nothing
@@ -449,15 +450,27 @@ end
 function tensorSumTet3D(tensor,posnN,J::Int64,K::Int64,alpha::Float64)
     indx = tensor[1]
     amps = tensor[2]
-    blkdims = getindex.(indx,posnN)
-    ampsN = amps .*visqrtT.(blkdims,J,K,alpha)
-    ampsN2 = real(ampsN) - imag(ampsN)
-    data = indx, ampsN2
-    ans = tensorSum(data,posnN)
+    if length(posnN) == 1
+        blkdims = getindex.(indx,posnN)
+        ampsN = amps .*visqrtT.(blkdims,J,K,alpha)
+        ampsN2 = real(ampsN) - imag(ampsN)
+        data = indx, ampsN2
+        ans = tensorSum(data,posnN)
+    else
+        blkdims = getindex.(indx,[posnN])
+        sqdm = []
+        for i in blkdims
+            push!(sqdm,prod(visqrtT.(i,J,K,alpha)))
+        end
+        ampsN = amps .*sqdm
+        ampsN2 = real(ampsN) - imag(ampsN)
+        data = indx, ampsN2
+        ans = tensorSum(data,posnN)
+    end
     return ans
 end
 
-export swap2, permuteInd, tensorPermute
+export swap2, permuteInd, tensorPermute, tensor22moveA
 
 # Performs an F-move on a face.. equivalent to 2-2 Pachner move -- this uses Fsymbol
 function swap2(vec,a,b)
@@ -466,27 +479,37 @@ function swap2(vec,a,b)
 end
 
 function tensor22move(tensor,posF,J::Int64,K::Int64,alpha::Float64) # J,K,alpha determines what Fsymbol to use
+    glu = tensorGlueTet3D(tensor,dataTet(J,K,alpha),posF,[1,5,2,4,6],J,K,alpha)
+    n = posF[end]
+    m = length(glu[1][1])
+    swp = @. swap2(glu[1],n,m)
+    tensorN = swp, glu[2]
+    ans = tensorSumTet3D(tensorN,[length(glu[1][1])],J,K,alpha)
+    return ans
+end
+
+function tensor22moveA(tensor,posF,J::Int64,K::Int64,alpha::Float64)
     glu = tensorGlue(tensor,dataFsymb(J,K,alpha),posF,[1,5,2,4,6])
     n = posF[end]
     m = length(glu[1][1])
     swp = @. swap2(glu[1],n,m)
     tensorN = swp, glu[2]
-    ans = tensorSum(tensorN,[length(glu[1][1])])
+    ans = tensorSum(tensorN,[m])
     return ans
 end
 
 # For 3-1 move, we will use SVD -- i.e. use the function fullSplitTet3D or fullSplit3D
 
-function permuteInd(vec,perm)
-    #perm = [5,1,11,2,6,3,10,12,7,8,4,9]
+function permuteInd(vec)
+    perm = [5,1,11,2,6,3,10,12,7,8,4,9]
     nvec = vec[perm]
     return nvec
 end
 
 
-function tensorPermute(tensor,perm)
+function tensorPermute(tensor)
     indx = tensor[1]
-    indxN = permuteInd.([indx],perm)
+    indxN = permuteInd.(indx)
     return indxN , tensor[2]
 end
 
