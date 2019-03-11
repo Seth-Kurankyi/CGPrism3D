@@ -114,6 +114,13 @@ function TetraJK(i::Float64,j::Float64,m::Float64,k::Float64,l::Float64,n::Float
     alpha*Tetra6j(i,j,m,k,l,n,J) +(1-alpha)*Tetra6j(i,j,m,k,l,n,K)
 end
 
+function visqrtU(Utensor,a::Float64)
+    indx = Utensor[1]
+    amps = Utensor[2]
+    fc = findfirst(x-> x == [0.,0.,0.,a,a,a], indx)
+    ((-1+0im)^a )*sqrt(abs(amps[fc]))
+end
+
 export dataTet, dataFsymb
 
 # get all non-zero amplitudes and spins 
@@ -282,18 +289,77 @@ function tensorGlue(tensorB,tensorA,posnB,posnA)# glue two tensors TA,TB along p
     return indxsol,sol
 end
 
-function tensorGlueTet3D(tensorB,tensorA,posnB,posnA,J::Int64,K::Int64,alpha::Float64)
-    indx, amps = tensorGlue(tensorB,tensorA,posnB,posnA)
-    face = getindex.(indx, [posnB])
-    ans = complex(ones(length(face)))
-    #visqt = visqJK(a,J,K,alpha)
     for i in 1:length(face)
-        ans[i] = prod(visqrtT.(face[i],J,K,alpha))
+function tensorGlueTet3D(tensorB,tensorA,posnB,posnA,Utensor)# glue two tensors TA,TB along posnA from TA and posnB from TB 
+    indxA = tensorA[1] # spins of TA
+    indxB = tensorB[1] # spins of TB
+    ampsA = tensorA[2] # amplitudes of TA
+    ampsB = tensorB[2] # amplitudes of TB
+    shrdA = getindex.(indxA,[posnA])
+    shrdB = getindex.(indxB,[posnB])
+    lena = collect(1:length(indxA[1]))
+    deleteat!(lena,sort(posnA)) # assert needs posnA to be a vector
+    #if length(posnA) > 1 deleteat!(lena,sort(posnA,dims=2) else  deleteat!(lena,sort(posnA)) end
+    shrdAB = []#Tuple{Array{Float64,1},Int64,Int64}[]
+    qq = Array{Array{Float64,1},1}[]
+    amps = Array{Float64,1}[]
+    sa = sortperm(shrdA)
+    sb = sortperm(shrdB)
+    shrdA = shrdA[sa]
+    shrdB = shrdB[sb]
+    sindxA = indxA[sa]
+    sindxB = indxB[sb]
+    sampsA = ampsA[sa]
+    sampsB = ampsB[sb]
+    shrdAu = unique(shrdA)
+    shrdBu = unique(shrdB)
+    shrd = shrdAu
+    #println(shrdAu == shrdBu)
+    if shrdAu == shrdBu
+        nothing
+    else
+        for i in shrdBu
+            #shrd = shrdAu
+            if !(i in shrdAu)
+                push!(shrd,i)
+            end
+        end
     end
-    ampsN = @. amps / ans
-    ampsN = real(ampsN)+imag(ampsN)
-    return indx, ampsN
+    for i in shrd
+        cna = count(x->x==i,shrdA)
+        cnb = count(x->x==i,shrdB)
+        push!(shrdAB, [i, cna,cnb ])
+    end
+    for i in shrdAB
+        if i[2] == 0 || i[3] == 0 # Put condition for when one of a or b is zero
+            nothing
+        else
+            for j in 1:i[2]
+                ans = @. sampsA[j]*sampsB[1:i[3]]
+                pp = 1
+                for k in i[1]
+                    pp *= visqrtU(Utensor,k)
+                end
+                ans /= pp
+                ampsN = real(ans)+imag(ans)
+                push!(amps,ampsN)
+                indxa = repeat([sindxA[j][lena]],i[3]) 
+                #for j in indxA[i][lena]
+                indxa1 = vcat.(sindxB[1:i[3]],indxa)
+                push!(qq,indxa1)
+            end
+        end
+        deleteat!(sindxA,1:i[2])
+        deleteat!(sindxB,1:i[3])
+        deleteat!(sampsA,1:i[2])
+        deleteat!(sampsB,1:i[3])
+        #cntb = cnt
+    end
+    indxsol = collect(Iterators.flatten(qq))
+    sol = collect(Iterators.flatten(amps))
+    return indxsol,sol
 end
+
 
 
 #A general function to splits fully the tensor M^C_{AB} to tensors U^C_{Ai} and V^C_{iB}. 
@@ -301,7 +367,7 @@ end
 # We keep only the first singular value (assuming a gemetric split)
 # splits prism into tetrahedron and a  pyramid
 # Multiply back by missing dimension factors 
-function fullSplitTet3D(dataM,posnA,posnB,posnC,J::Int64,K::Int64,alpha::Float64) # posnA,B,C must be vectors @assert length(dataM) = vcat(A,B,C)
+function fullSplitTet3D(dataM,posnA,posnB,posnC,Utensor,J,K,alpha) # posnA,B,C must be vectors @assert length(dataM) = vcat(A,B,C)
     indx = dataM[1] 
     ampvals = dataM[2]
     #posAC = vcat(posnA,posnC) # assert posnA,posnC must be both vectors
@@ -327,8 +393,12 @@ function fullSplitTet3D(dataM,posnA,posnB,posnC,J::Int64,K::Int64,alpha::Float64
             U1 = U[:,1] 
             V1 = V[:,1]
             s1 = s[1]
-            valU = U1*sqrt(s1)*sqrt(prod(visqrtT.(ampsC[i],J,K,alpha))) # multiply by leftover dimension factors
-            valV = V1*sqrt(s1)*sqrt(prod(visqrtT.(ampsC[i],J,K,alpha)))
+            pp = 1
+            for j in ampsC[i]
+                pp *= visqrtU(Utensor,j)
+            end
+            valU = U1*sqrt(s1)*sqrt(pp) # multiply by leftover dimension factors
+            valV = V1*sqrt(s1)*sqrt(pp)
             # valU,valV are all either real or purely imaginary
             valU = real(valU) - imag(valU) # take -ve of imaginary part if it gives only imag
             valV = real(valV) + imag(valV)
@@ -355,6 +425,8 @@ function fullSplitTet3D(dataM,posnA,posnB,posnC,J::Int64,K::Int64,alpha::Float64
     indxVs = collect(Iterators.flatten(indxsV))
     return (indxUs,ansU),(indxVs,ansV) #,indxUV
 end
+
+
 
 function fullSplit3D(dataM,posnA,posnB,posnC) # posnA,B,C must be vectors @assert length(dataM) = vcat(A,B,C)
     indx = dataM[1] 
@@ -414,6 +486,67 @@ end
 
 # Summing a tensor  over indices labelled posnN
 # Summing a tensor  over indices labelled posnN
+function tensorSumN(ampJ,posnN,Utensor)
+    indx = ampJ[1]
+    amps = ampJ[2]
+    lenS = collect(1:length(indx[1]))
+    deleteat!(lenS,sort(posnN))
+    #if length(posnN) > 1   deleteat!(lenS,sort(posnN,dims=2)) else  deleteat!(lenS,sort(posnN)) end
+    indxef = getindex.(indx,[lenS]) # get all spins without N 
+    #indxefN = getindex.(indx,[posnN])
+    #indxefu = unique(indxef)
+    tt = sortperm(indxef) # sort them spins 
+    indxef = indxef[tt] # apply sort on spins 
+    amps = amps[tt]  # apply sort on amps
+    #fc = findall(x-> x[lenS]==ans ,indx)
+    qq = []
+    indq = []
+    fc = sortperm(indxef)
+    indxN = indxef[fc]
+    amps = amps[fc]
+    #indxN = indxefN[fc]
+    if length(posnN) == 1
+        blkdims = getindex.(indx,posnN)[fc]
+        sqdm = []
+        for j in blkdims
+            push!(sqdm,visqrtU(Utensor,j))
+        end
+        ampsn = amps .*sqdm
+        ampsN = real(ampsn) - imag(ampsn)
+        #data = indx, ampsN2
+        #ans = tensorSum(data,posnN)
+    else
+        blkdims = getindex.(indx,[posnN])[fc]
+        sqdm = []
+        for i in blkdims
+            pp = 1
+            for j in i
+                pp *= numchop(visqrtU(Utensor,j))
+            end
+            push!(sqdm,pp)
+        end
+        #println(sqdm)
+        ampsn = amps .*sqdm
+        ampsN = real(ampsn) - imag(ampsn)
+        #data = indx, ampsN2
+        #ans = tensorSum(data,posnN)
+    end
+    
+    for i in 2:length(indxN)
+        if indxN[i] == indxN[i-1]
+            ampsN[i] += ampsN[i-1]
+        elseif numchop(ampsN[i-1]) != 0
+            push!(indq,indxN[i-1])
+            push!(qq,ampsN[i-1])
+        end
+    end
+    push!(indq,indxN[end])
+    push!(qq,ampsN[end])
+    return indq, qq
+end
+
+export tensorSumN 
+
 function tensorSum(ampJ,posnN)
     indx = ampJ[1]
     amps = ampJ[2]
@@ -447,12 +580,16 @@ end
 
 # Take care of dimension factors when summing. This makes sure Pachner 3-2 move works 
 # For now this only works for summing over one index-- we can change this easily
-function tensorSumTet3D(tensor,posnN,J::Int64,K::Int64,alpha::Float64)
+function tensorSumTet3D(tensor,posnN,Utensor)
     indx = tensor[1]
     amps = tensor[2]
     if length(posnN) == 1
         blkdims = getindex.(indx,posnN)
-        ampsN = amps .*visqrtT.(blkdims,J,K,alpha)
+        sqdm = []
+        for j in blkdims
+            push!(sqdm,visqrtU(Utensor,j))
+        end
+        ampsN = amps .*sqdm
         ampsN2 = real(ampsN) - imag(ampsN)
         data = indx, ampsN2
         ans = tensorSum(data,posnN)
@@ -460,8 +597,13 @@ function tensorSumTet3D(tensor,posnN,J::Int64,K::Int64,alpha::Float64)
         blkdims = getindex.(indx,[posnN])
         sqdm = []
         for i in blkdims
-            push!(sqdm,prod(visqrtT.(i,J,K,alpha)))
+            pp = 1
+            for j in i
+                pp *= numchop(visqrtU(Utensor,j))
+            end
+            push!(sqdm,pp)
         end
+        #println(sqdm)
         ampsN = amps .*sqdm
         ampsN2 = real(ampsN) - imag(ampsN)
         data = indx, ampsN2
@@ -470,7 +612,7 @@ function tensorSumTet3D(tensor,posnN,J::Int64,K::Int64,alpha::Float64)
     return ans
 end
 
-export swap2, permuteInd, tensorPermute, tensor22moveA
+export swap2, permuteInd, tensorPermute, tensor22move, tensor22moveF, tensor22moveT
 
 # Performs an F-move on a face.. equivalent to 2-2 Pachner move -- this uses Fsymbol
 function swap2(vec,a,b)
@@ -478,17 +620,65 @@ function swap2(vec,a,b)
     return vec
 end
 
-function tensor22move(tensor,posF,J::Int64,K::Int64,alpha::Float64) # J,K,alpha determines what Fsymbol to use
-    glu = tensorGlueTet3D(tensor,dataTet(J,K,alpha),posF,[1,5,2,4,6],J,K,alpha)
+function tensor22move(tensor,face,J::Int64,K::Int64,alpha::Float64)# place middle edge at last position 
+    # assert face contains 5 elements
+    indx = tensor[1] # spins of TB
+    amps = tensor[2]
+    flast = face[end]
+    y = K/2
+    indxlast = getindex.(indx, [flast])
+    famps = []
+    findx = []
+    for i in 1:length(indx)
+        #iMod = copy(indx[i])
+        j1 = indx[i][face[1]]; j2 = indx[i][face[2]]; j3 = indx[i][face[3]]; j4 = indx[i][face[4]]; j5 = indx[i][face[5]]
+    #    #ans = 0#amps[i]
+    #    ind = zeros(length(indx[1]))
+        for j in 0.:0.5:y
+            #iMod = deepcopy(indxf1u)
+            if delta(j1,j3,j,K) != 0 && delta(j2,j4,j,K) != 0 && Fsymb(j1,j3,j,j4,j2,j5,K) != 0
+                iMod = copy(indx[i])
+                ampsA = numchop(amps[i] * Fsymb(j1,j3,j,j4,j2,j5,K))
+                push!(famps,ampsA)
+                iMod[flast] = j
+                push!(findx,iMod)
+                #push!(findx,insert!(deleteat!(iMod,flast),flast,j))
+                #fc = findall(x-> x == iMod,indxf1 )
+            end
+        end
+    end
+    #indxf1 = getindex.(indx, [ff1]) # get all spins without spin N to be summed over 
+    tt = sortperm(findx) # sort them spins 
+    indxf1 = findx[tt] # apply sort on spins 
+    famps = famps[tt]  # apply sort on amps
+    #fc = findall(x-> x[lenS]==ans ,indx)
+    qq = []
+    indxeff = []
+    for i in 2:length(indxf1)
+        if indxf1[i] == indxf1[i-1]
+            famps[i] += famps[i-1]
+        elseif numchop(famps[i-1]) != 0
+            push!(indxeff,indxf1[i-1])
+            push!(qq,famps[i-1])
+        end
+    end
+    push!(indxeff,indxf1[end])
+    push!(qq,famps[end])
+    #indxeff = unique(indxf1)
+    return indxeff, qq
+end
+
+function tensor22moveT(tensor,posF,Utensor) # J,K,alpha determines what Fsymbol to use
+    glu = tensorGlueTet3D(tensor,Utensor,posF,[1,5,2,4,6],Utensor)
     n = posF[end]
     m = length(glu[1][1])
     swp = @. swap2(glu[1],n,m)
     tensorN = swp, glu[2]
-    ans = tensorSumTet3D(tensorN,[length(glu[1][1])],J,K,alpha)
+    ans = tensorSumTet(tensorN,[length(glu[1][1])],Utensor)
     return ans
 end
 
-function tensor22moveA(tensor,posF,J::Int64,K::Int64,alpha::Float64)
+function tensor22moveF(tensor,posF,J::Int64,K::Int64,alpha::Float64)
     glu = tensorGlue(tensor,dataFsymb(J,K,alpha),posF,[1,5,2,4,6])
     n = posF[end]
     m = length(glu[1][1])
@@ -500,16 +690,20 @@ end
 
 # For 3-1 move, we will use SVD -- i.e. use the function fullSplitTet3D or fullSplit3D
 
-function permuteInd(vec)
-    perm = [5,1,11,2,6,3,10,12,7,8,4,9]
+function permuteInd(vec,perm)
+    #perm = [5,1,11,2,6,3,10,12,7,8,4,9]
     nvec = vec[perm]
     return nvec
 end
 
 
-function tensorPermute(tensor)
+function tensorPermute(tensor,perm)
     indx = tensor[1]
-    indxN = permuteInd.(indx)
+    indxN = []
+    @assert length(indx[1]) == length(perm)
+    for i in indx
+        push!(indxN,i[perm])
+    end
     return indxN , tensor[2]
 end
 
