@@ -258,7 +258,7 @@ function dataGsymb(J::Int64,K::Int64,alpha::Float64)
     return t6j,t6s
 end
 
-function tensorBlock(tensorM,posnA,posnB,posnC,spinC)
+function tensorBlockOld(tensorM,posnA,posnB,posnC,spinC)
     indx = tensorM[1]
     ampvals = tensorM[2]
     fc = findall(x-> x[posnC] == spinC, indx) #find spinsC in all spins length(posnC) = length(spinC)
@@ -285,6 +285,50 @@ function tensorBlock(tensorM,posnA,posnB,posnC,spinC)
     else
         return 0,0,0
     end
+end
+
+function tensorBlock(tensorM,posnA,posnB,posnC,spinC)
+    indx = tensorM[1]
+    ampvals = tensorM[2]
+    fc = findall(x-> x[posnC] == spinC, indx) #find spinsC in all spins length(posnC) = length(spinC)
+    indxI = indx[fc] # this contains all spin configuration containing ampsC
+    ampsI = ampvals[fc] # this contains the corresponding spin amplitude values for ampsC
+    Acol = sort(unique(getindex.(indxI, [posnA])))
+    Brow = sort(unique(getindex.(indxI, [posnB])))
+    indxU = vcat.(Acol,repeat([spinC],length(Acol)))
+    indxV = vcat.(Brow,repeat([spinC],length(Brow)))
+    #indxU = []
+    #indxV = []
+    #println(ampInfo)
+    la = length(Acol)
+    lb = length(Brow)
+    lpa = length(posnA)
+    lpb = length(posnB)
+    matM = zeros(la,lb)
+    if la != 0 || lb !=0
+        #if length(ampsI) == la*lb
+        indxM = []
+        #pos = collect(Iterators.flatten(([posnA,posnB,posnC])))
+        pos = vcat(posnA,posnB,posnC)
+        for i in indxI
+            push!(indxM,i[pos])
+        end
+        sp = sortperm(indxM)
+        ampInfo = indxM[sp]
+        amps = ampsI[sp]
+        for i in 1:la, j in 1:lb
+            if ampInfo[1][1:lpa] == Acol[i] && ampInfo[1][lpa+1:lpb+lpa] == Brow[j]
+                #println("sucess")
+                matM[i,j] = amps[1]
+                deleteat!(amps,1)
+                deleteat!(ampInfo,1)
+            end
+        end
+        return matM,indxU,indxV#,ampInfo
+    else
+        return 0,0,0
+    end
+    #return ampInfo, matM
 end
 
 export tensorGlueTet3DO, tensorGlueTet3DN, tensorGlue
