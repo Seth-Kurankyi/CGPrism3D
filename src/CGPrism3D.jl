@@ -110,7 +110,11 @@ function visqrtU(Utensor,a::Float64)
     indx = Utensor[1]
     amps = Utensor[2]
     fc = findfirst(x-> x == [0.,0.,0.,a,a,a], indx)
-    ((-1+0im)^a )*sqrt(abs(amps[fc]))
+    ans = 0
+    if typeof(fc) == Int64
+        ans = ((-1+0im)^a )*sqrt(abs(amps[fc]))
+    end
+    ans
 end
 
 function TetraJK(i::Float64,j::Float64,m::Float64,k::Float64,l::Float64,n::Float64,J::Int64,K::Int64,alpha::Float64)
@@ -189,10 +193,10 @@ function dataTet(J::Int64,K::Int64,alpha::Float64)
                         if delta(ja,je,jf,K) != 0 && delta(jb,jd,jf,K) != 0
             #dims = prod(visqrt.([ja,jb,jc,jd,je,jf]))
                             sol = numchop(TetraJK(ja,jb,jc,jd,je,jf,J,K,alpha))
-                            if sol != 0
-                                push!(t6s,sol)
-                                push!(t6j,[ja,jb,jc,jd,je,jf])
-                            end
+                            #if sol != 0
+                            push!(t6s,sol)
+                            push!(t6j,[ja,jb,jc,jd,je,jf])
+                            #end
                         end
                     end
                 end
@@ -286,6 +290,8 @@ function tensorBlockOld(tensorM,posnA,posnB,posnC,spinC)
         return 0,0,0
     end
 end
+
+export tensorBlock
 
 function tensorBlock(tensorM,posnA,posnB,posnC,spinC)
     indx = tensorM[1]
@@ -420,6 +426,87 @@ function tensorGlue(tensorB,tensorA,posnB,posnA)# glue two tensors TA,TB along p
     return indxsol,sol
 end
 
+export tensorGlueTet3DN2
+
+function tensorGlueTet3DN2(tensorB,tensorA,posnB,posnA,Utensor)# glue two tensors TA,TB along posnA from TA and posnB from TB 
+    indxA = tensorA[1] # spins of TA
+    indxB = tensorB[1] # spins of TB
+    ampsA = tensorA[2] # amplitudes of TA
+    ampsB = tensorB[2] # amplitudes of TB
+    shrdA = getindex.(indxA,[posnA])
+    shrdB = getindex.(indxB,[posnB])
+    lena = collect(1:length(indxA[1]))
+    deleteat!(lena,sort(posnA)) # assert needs posnA to be a vector
+    #if length(posnA) > 1 deleteat!(lena,sort(posnA,dims=2) else  deleteat!(lena,sort(posnA)) end
+    shrdAB = []#Tuple{Array{Float64,1},Int64,Int64}[]
+    qq = []#Array{Array{Float64,1},1}[]
+    amps = [] #Array{Float64,1}[]
+    sa = sortperm(shrdA)
+    sb = sortperm(shrdB)
+    shrdA = shrdA[sa]
+    shrdB = shrdB[sb]
+    sindxA = indxA[sa]
+    sindxB = indxB[sb]
+    sampsA = ampsA[sa]
+    sampsB = ampsB[sb]
+    shrdAu = unique(shrdA)
+    shrdBu = unique(shrdB)
+    shrd = shrdAu
+    #println(shrdAu == shrdBu)
+    if shrdAu == shrdBu
+        nothing
+    else
+        for i in shrdBu
+            #shrd = shrdAu
+            if !(i in shrdAu)
+                push!(shrd,i)
+            end
+        end
+    end
+    for i in shrd
+        cna = count(x->x==i,shrdA)
+        cnb = count(x->x==i,shrdB)
+        push!(shrdAB, [i, cna,cnb])
+        #println("Ca,Cna = ",ca,"\t",cna)
+        #println("Cb,Cnb = ",cb,"\t",cnb)
+    end
+    for i in shrdAB
+        if i[2] == 0 || i[3] == 0 # Put condition for when one of a or b is zero
+            nothing
+        else
+            for j in 1:i[2]
+                for k in 1:i[3]
+                    indx1 = vcat(sindxB[k],sindxA[j][lena])
+                    pp=1
+                    for k in i[1]
+                        pp *= visqrtU(Utensor,k)
+                    end
+                    amps1 = numchop(sampsA[j]*sampsB[k]/pp)
+                    push!(qq,indx1)
+                    push!(amps,amps1)
+                    #ans = @. sampsA[j]*sampsB[1:i[3]]
+                end
+                #pp = 1
+                #
+                #ans /= pp
+                #ampsN = numchop.(real(ans)+imag(ans))
+                #push!(amps,ampsN)
+                #indxa = repeat([sindxA[j][lena]],i[3]) 
+                #for j in indxA[i][lena]
+                #indxa1 = vcat.(sindxB[1:i[3]],indxa)
+                #push!(qq,indxa1)
+            end
+        end
+        deleteat!(sindxA,1:i[2])
+        deleteat!(sindxB,1:i[3])
+        deleteat!(sampsA,1:i[2])
+        deleteat!(sampsB,1:i[3])
+        #cntb = cnt
+    end
+    #indxsol = collect(Iterators.flatten(qq))
+    #sol = collect(Iterators.flatten(amps))
+    return qq, amps #indxsol,sol
+end
 
 function tensorGlueTet3DN(tensorB,tensorA,posnB,posnA,Utensor)# glue two tensors TA,TB along posnA from TA and posnB from TB 
     indxA = tensorA[1] # spins of TA
@@ -520,15 +607,19 @@ function fullSplitTet3DN(dataM,posnA,posnB,posnC,Utensor,J::Int64,K::Int64,alpha
         #if mat != 0
             U, s, V = svd(mat)
             #truncate and use only first singular value
-            U1 = U[:,1] 
-            V1 = V[:,1]
-            s1 = s[1]
+            trunc = 1#length(s)
+            U1 = U[:,1:trunc] 
+            V1 = V[:,1:trunc]
+            s1 = numchop.(s[1:trunc])
             pp = 1
+            #println(ampsC[i])
             for j in ampsC[i]
+                #println(j)
                 pp *= visqrtU(Utensor,j)
             end
-            valU = U1*sqrt(s1)*sqrt(pp) # multiply by leftover dimension factors
-            valV = V1*sqrt(s1)*sqrt(pp)
+            #@show trunc
+            valU = U1*sqrt.(s1)*sqrt(pp) # multiply by leftover dimension factors
+            valV = V1*sqrt.(s1)*sqrt(pp)
             # valU,valV are all either real or purely imaginary
             valU = real(valU) - imag(valU) # take -ve of imaginary part if it gives only imag
             valV = real(valV) + imag(valV)
