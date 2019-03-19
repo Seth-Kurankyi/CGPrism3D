@@ -2,7 +2,7 @@ module CGPrism3D
 using LinearAlgebra
 #using StatsBase
 
-numchop(num::Real)=(abs(num) >= 1000*eps() ? num : zero(Real))
+numchop(num::Real)= round(num,digits=13)#(abs(num) >= 1000*eps() ? num : zero(Real))
 
 function numchop(num::Complex)
     numchop(imag(num)) == 0 ? numchop(real(num)) : Complex(numchop(real(num)), numchop(imag(num)))
@@ -86,8 +86,8 @@ export Tetra6j, delta, visqrt
 function Tetra6j(i::Float64,j::Float64,m::Float64,k::Float64,l::Float64,n::Float64,K::Int64)
     sol = 0.
     if delta(i,j,m,K) != 0 && delta(i,l,n,K) != 0 && delta(k,j,n,K) != 0 && delta(k,l,m,K) != 0
-        dims = prod(visqrt.([i,j,m,k,l,n],K))
-        sol =  numchop(dims*Gsymb(i,j,m,k,l,n,K))
+        dims = (prod(visqrt.([i,j,m,k,l,n],K)))
+        sol =  (dims*Gsymb(i,j,m,k,l,n,K))
     end
     return sol
 end
@@ -481,7 +481,7 @@ function tensorGlueTet3DN2(tensorB,tensorA,posnB,posnA,Utensor)# glue two tensor
                     for k in i[1]
                         pp *= visqrtU(Utensor,k)
                     end
-                    amps1 = numchop(sampsA[j]*sampsB[k]/pp)
+                    amps1 = (sampsA[j]*sampsB[k]/pp)
                     push!(qq,indx1)
                     push!(amps,amps1)
                     #ans = @. sampsA[j]*sampsB[1:i[3]]
@@ -561,7 +561,7 @@ function tensorGlueTet3DN(tensorB,tensorA,posnB,posnA,Utensor)# glue two tensors
                     pp *= visqrtU(Utensor,k)
                 end
                 ans /= pp
-                ampsN = numchop.(real(ans)+imag(ans))
+                ampsN = (real(ans)+imag(ans))
                 push!(amps,ampsN)
                 indxa = repeat([sindxA[j][lena]],i[3]) 
                 #for j in indxA[i][lena]
@@ -577,7 +577,7 @@ function tensorGlueTet3DN(tensorB,tensorA,posnB,posnA,Utensor)# glue two tensors
     end
     indxsol = collect(Iterators.flatten(qq))
     sol = collect(Iterators.flatten(amps))
-    return indxsol,sol
+    return indxsol,numchop.(sol)
 end
 
 # can also improve tensorGlueTet3D maybe?
@@ -608,9 +608,9 @@ function fullSplitTet3DN(dataM,posnA,posnB,posnC,Utensor,J::Int64,K::Int64,alpha
             U, s, V = svd(mat)
             #truncate and use only first singular value
             trunc = 1#length(s)
-            U1 = U[:,1:trunc] 
-            V1 = V[:,1:trunc]
-            s1 = numchop.(s[1:trunc])
+            U1 = numchop.(U[:,1:trunc] )
+            V1 = numchop.( V[:,1:trunc] )
+            s1 = numchop.((s[1:trunc]) )
             pp = 1
             #println(ampsC[i])
             for j in ampsC[i]
@@ -643,11 +643,12 @@ function fullSplitTet3DN(dataM,posnA,posnB,posnC,Utensor,J::Int64,K::Int64,alpha
     #println("done")
     solU = collect(Iterators.flatten(ampsU))
     solV = collect(Iterators.flatten(ampsV))
+    @show (solU[1])
     ansU = solU/solU[1] # normalization condition
     ansV = solV/solV[1]
     indxUs = collect(Iterators.flatten(indxsU))
     indxVs = collect(Iterators.flatten(indxsV))
-    return (indxUs,ansU),(indxVs,ansV) #,indxUV
+    return (indxUs,numchop.(ansU)),(indxVs,numchop.(ansV)) #,indxUV
 end
 
 
@@ -688,7 +689,7 @@ function tensorSumTetN(ampJ,posnN,Utensor)
         for i in blkdims
             pp = 1
             for j in i
-                pp *= numchop(visqrtU(Utensor,j))
+                pp *= (visqrtU(Utensor,j))
             end
             push!(sqdm,pp)
         end
@@ -741,7 +742,7 @@ function tensorSum(ampJ,posnN)
     end
     push!(indq,indxN[end])
     push!(qq,ampsN[end])
-    return indq, qq
+    return indq, numchop.(qq)
 end
 
 #maybe can also improve tensorSumTet
@@ -765,7 +766,7 @@ function tensorSumTetO(tensor,posnN,Utensor)
         for i in blkdims
             pp = 1
             for j in i
-                pp *= numchop(visqrtU(Utensor,j))
+                pp *= (visqrtU(Utensor,j))
             end
             push!(sqdm,pp)
         end

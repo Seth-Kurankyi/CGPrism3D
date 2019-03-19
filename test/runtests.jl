@@ -2,15 +2,16 @@ using CGPrism3D
 using Test
 using LinearAlgebra
 
-J,K,alpha = 3,3,1.
+J,K,alpha = 2,2,0.5
 dataT = dataTet(J,K,alpha)
+@show unique(dataT[2])
 #dependence of tensorGlueTet3D on J,K,alpha is for dimension factors
-tet2 = tensorGlueTet3DN(dataT,dataT,[1,2,3],[1,2,3],dataT)
-tb2 = tensorBlock(tet2,[4,5,6],[7,8,9],[1,2,3],[0.,0.5,0.5])[1]
-U,s,V =svd(tb2)
-@show s
-@time prA = tensorGlueTet3DN(tet2,dataT,[2,7,9],[1,2,3],dataT)
-@show length(prA[1])
+#tet2 = tensorGlueTet3DN(dataT,dataT,[1,2,3],[1,2,3],dataT)
+#tb2 = tensorBlock(tet2,[4,5,6],[7,8,9],[1,2,3],[0.,0.5,0.5])[1]
+#U,s,V =svd(tb2)
+#@show s
+#@time prA = tensorGlueTet3DN(tet2,dataT,[2,7,9],[1,2,3],dataT)
+#@show length(prA[1])
 
 #@time prA2 = tensorGlueTet3DN2(tet2,dataT,[2,7,9],[1,2,3],dataT)
 #@show length(prA[1]), length(prA2[1])
@@ -23,6 +24,7 @@ function testA(J::Int64,K::Int64,alpha::Float64,loop)
 
     #Using only Prism A to coarse grain 
     for l in 1:loop
+        println("loop=$l")
         #dataT,dataV = fullSplitTet3DN(prA,[4,5,6],[7,8,9,10,11,12],[1,2,3],dataT,J,K,alpha)
         #dataT = tensorPermuteN(dataT,[4,5,6,1,2,3])
         #prA = 
@@ -52,7 +54,7 @@ function testA(J::Int64,K::Int64,alpha::Float64,loop)
         CGPrsmA1 = fullSplitTet3DN(f133A[2],[8,10,2],[1,3,5,6,7,9,12,14,15],[13,4,11],dataT,J,K,alpha)[2]
         tperm = tensorPermuteN(CGPrsmA1,[5,1,11,2,6,3,10,12,7,8,4,9])
         prA = tensorProjectPrism(tperm,K)
-        #dataT = tensorPermuteN(fullSplitTet3DN(prA,[7,8,9,10,11,12],[4,5,6],[1,2,3],dataT,J,K,alpha)[2],[4,5,6,1,2,3])
+        dataT = tensorPermuteN(fullSplitTet3DN(prA,[7,8,9,10,11,12],[4,5,6],[1,2,3],dataT,J,K,alpha)[2],[4,5,6,1,2,3])
         @show length(prA[1])
         #@show println(dataT1[1])
         #@show println(dataT[1])
