@@ -7,7 +7,7 @@ dataT = dataTet(J,K,alpha)
 @show unique(dataT[2])
 #dependence of tensorGlueTet3D on J,K,alpha is for dimension factors
 #tet2 = tensorGlueTet3DN(dataT,dataT,[1,2,3],[1,2,3],dataT)
-#tb2 = tensorBlock(tet2,[4,5,6],[7,8,9],[1,2,3],[0.,0.5,0.5])[1]
+tb2 = tensorBlock(dataT,[],[2,3,4,5,6],[1],[0.,0.5,0.5])[1]
 #U,s,V =svd(tb2)
 #@show s
 #@time prA = tensorGlueTet3DN(tet2,dataT,[2,7,9],[1,2,3],dataT)
@@ -70,7 +70,7 @@ end
 
 
 #for i in 1:3
-@time ff = testA(J,K,alpha,100)
+@time ff = testA(J,K,alpha,30)
 #fullSplitTet3DN(ff,)
 #@time ff1 = testA(J,K,alpha)
 #tb = tensorBlock(ff[1],[4,5,6],[7,8,9,10,11,12],[1,2,3],[0.,0.5,0.5])[1]

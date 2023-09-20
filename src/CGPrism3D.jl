@@ -2,7 +2,7 @@ module CGPrism3D
 using LinearAlgebra
 #using StatsBase
 
-numchop(num::Real)= round(num,digits=13)#(abs(num) >= 1000*eps() ? num : zero(Real))
+numchop(num::Real)= round(num,digits=14)#(abs(num) >= 1000*eps() ? num : zero(Real))
 
 function numchop(num::Complex)
     numchop(imag(num)) == 0 ? numchop(real(num)) : Complex(numchop(real(num)), numchop(imag(num)))
@@ -115,6 +115,7 @@ function visqrtU(Utensor,a::Float64)
         ans = ((-1+0im)^a )*sqrt(abs(amps[fc]))
     end
     ans
+    1
 end
 
 function TetraJK(i::Float64,j::Float64,m::Float64,k::Float64,l::Float64,n::Float64,J::Int64,K::Int64,alpha::Float64)
@@ -643,7 +644,7 @@ function fullSplitTet3DN(dataM,posnA,posnB,posnC,Utensor,J::Int64,K::Int64,alpha
     #println("done")
     solU = collect(Iterators.flatten(ampsU))
     solV = collect(Iterators.flatten(ampsV))
-    @show (solU[1])
+    #@show (solU[1])
     ansU = solU/solU[1] # normalization condition
     ansV = solV/solV[1]
     indxUs = collect(Iterators.flatten(indxsU))
