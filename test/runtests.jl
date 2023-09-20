@@ -2,7 +2,7 @@ using CGPrism3D
 using Test
 using LinearAlgebra
 
-J,K,alpha = 2,2,0.5
+J,K,alpha = 2,3,0.5
 dataT = dataTet(J,K,alpha)
 @show unique(dataT[2])
 #dependence of tensorGlueTet3D on J,K,alpha is for dimension factors
@@ -22,12 +22,12 @@ function testA(J::Int64,K::Int64,alpha::Float64,loop)
     tet2 = tensorGlueTet3DN(dataT,dataT,[1,2,3],[1,2,3],dataT)
     prA = tensorGlueTet3DN(tet2,dataT,[2,7,9],[1,2,3],dataT)
 
-    #Using only Prism A to coarse grain 
+    #Using only Prism A to coarse grain
     for l in 1:loop
         println("loop=$l")
         #dataT,dataV = fullSplitTet3DN(prA,[4,5,6],[7,8,9,10,11,12],[1,2,3],dataT,J,K,alpha)
         #dataT = tensorPermuteN(dataT,[4,5,6,1,2,3])
-        #prA = 
+        #prA =
         pruvA = tensorGlueTet3DN(prA,prA,[1,5,6,8,9],[2,4,6,12,11],dataT)
         pruvAA = tensorSumTetO(pruvA,[1],dataT)
         #@time pruvAAn = tensorSumTet3D(pruvA,[1],dataT)
